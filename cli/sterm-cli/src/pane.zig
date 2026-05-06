@@ -13,7 +13,7 @@ pub const Pane = struct {
 pub fn dispatch(args: anytype, writer: anytype) !void {
     const sub = args.next() orelse "help";
     if (std.mem.eql(u8, sub, "create")) {
-        try writer.writeAll("{\"pane\":{\"id\":\"pane_mock\",\"status\":\"running\"}}\n");
+        try writer.writeAll("{\"pane\":{\"id\":\"pane_01\",\"status\":\"requires-daemon\"}}\n");
     } else if (std.mem.eql(u8, sub, "write")) {
         try writer.writeAll("{\"pane_write\":\"accepted\"}\n");
     } else if (std.mem.eql(u8, sub, "resize")) {

@@ -15,4 +15,11 @@
 - storage,
 - doctor/observability checks.
 
-The first wave includes a mock VT adapter boundary. Real `libghostty-vt` integration is intentionally isolated behind `cli/sterm-cli/src/vt/ghostty_adapter.zig`.
+The current daemon foundation validates production-shaped runtime paths, private
+Unix-socket defaults, auth-token file mode, state-store migration metadata,
+PTY/process ownership contracts, and per-pane supervisor boundaries.
+
+`libghostty-vt` remains isolated behind
+`cli/sterm-cli/src/vt/ghostty_adapter.zig`. When the library is not linked, the
+agent reports `libghostty-vt-unavailable` explicitly instead of silently moving
+VT parsing into the frontend.

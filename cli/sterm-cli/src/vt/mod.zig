@@ -6,7 +6,7 @@ pub const scrollback = @import("scrollback.zig");
 pub const TerminalAdapter = struct {
     rows: u16,
     cols: u16,
-    title_text: []const u8 = "mock-local",
+    title_text: []const u8 = "contract-local",
     destroyed: bool = false,
 
     pub fn create(rows: u16, cols: u16) TerminalAdapter {
@@ -28,11 +28,11 @@ pub const TerminalAdapter = struct {
 
     pub fn snapshot(self: TerminalAdapter) snapshot.Snapshot {
         return snapshot.Snapshot{
-            .pane_id = "pane_mock_01",
+            .pane_id = "pane_contract_01",
             .seq = 1,
             .rows = self.rows,
             .cols = self.cols,
-            .cells = "mock-cell-grid:v1",
+            .cells = "contract-cell-grid:v1",
         };
     }
 
@@ -57,7 +57,7 @@ pub const TerminalAdapter = struct {
     }
 };
 
-test "vt adapter boundary is mock only in first wave" {
+test "vt adapter boundary stays isolated from libghostty availability" {
     var adapter = TerminalAdapter.create(40, 120);
     try @import("std").testing.expectEqual(@as(usize, 5), adapter.feed("hello"));
     try @import("std").testing.expectEqual(@as(usize, 5), adapter.input("input"));
@@ -67,7 +67,7 @@ test "vt adapter boundary is mock only in first wave" {
     try @import("std").testing.expectEqual(@as(usize, 1), adapter.dirtyRegions().len);
     try @import("std").testing.expectEqual(@as(u64, 3), adapter.scrollback().available_lines);
     try @import("std").testing.expect(adapter.cursor().visible);
-    try @import("std").testing.expectEqualStrings("mock-local", adapter.title());
+    try @import("std").testing.expectEqualStrings("contract-local", adapter.title());
     adapter.destroy();
     try @import("std").testing.expect(adapter.destroyed);
 }

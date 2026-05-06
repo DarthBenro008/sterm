@@ -12,7 +12,7 @@ pub fn dispatch(args: anytype, writer: anytype) !void {
     if (std.mem.eql(u8, sub, "list")) {
         try writer.writeAll("{\"workspaces\":[]}\n");
     } else if (std.mem.eql(u8, sub, "create")) {
-        try writer.writeAll("{\"workspace\":{\"id\":\"ws_mock\",\"name\":\"mock-local\"}}\n");
+        try writer.writeAll("{\"workspace\":{\"id\":\"ws_01\",\"name\":\"agent-runner\",\"status\":\"requires-daemon\"}}\n");
     } else {
         try writer.writeAll("usage: sterm-cli workspace <list|create>\n");
     }

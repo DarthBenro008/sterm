@@ -1,6 +1,10 @@
 const std = @import("std");
 const cli = @import("cli.zig");
+const daemon = @import("daemon.zig");
+const process = @import("process.zig");
 const protocol = @import("protocol.zig");
+const pty = @import("pty.zig");
+const runtime = @import("runtime.zig");
 const security = @import("security.zig");
 const socket = @import("socket.zig");
 const storage = @import("storage.zig");
@@ -21,19 +25,20 @@ test "CLI exposes required command surface" {
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{"daemon"}, &output.writer, &errors.writer);
-    try std.testing.expect(std.mem.indexOf(u8, output.written(), "unix-only") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "daemon: ready") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "listener: unix-socket") != null);
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{"status"}, &output.writer, &errors.writer);
-    try std.testing.expect(std.mem.indexOf(u8, output.written(), "offline (scaffold)") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "runtime: configured") != null);
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{"doctor"}, &output.writer, &errors.writer);
-    try std.testing.expect(std.mem.indexOf(u8, output.written(), "doctor: ok") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "\"socket_mode\":\"0600\"") != null);
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{ "workspace", "list" }, &output.writer, &errors.writer);
-    try std.testing.expect(std.mem.indexOf(u8, output.written(), "workspace list") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "state store configured") != null);
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{ "workspace", "create", "agents", "/tmp/project" }, &output.writer, &errors.writer);
@@ -65,7 +70,20 @@ test "security and socket defaults are remote-safe" {
     try std.testing.expect(security.redact_secrets_in_logs);
 }
 
-test "VT adapter boundary is mock-only and validates sizes" {
+test "runtime, daemon, storage, process, and pty foundations are production-shaped" {
+    var paths = try runtime.RuntimePaths.init(std.testing.allocator, "/home/alice");
+    defer paths.deinit();
+    try paths.validate();
+    try std.testing.expectEqualStrings("/home/alice/.sterm/sterm.sock", paths.socket_path);
+
+    try (daemon.DaemonPlan{}).validate();
+    try (storage.StateStorePlan{}).validate();
+    try (process.ProcessPlan{ .command = "bash" }).validate();
+    try (pty.PtyPlan{ .cwd = "/home/alice/project", .rows = 40, .cols = 120 }).validate();
+    try std.testing.expect((process.SupervisorPlan{}).isProductionBoundary());
+}
+
+test "VT adapter boundary validates sizes and gates missing libghostty honestly" {
     var mock = vt.MockAdapter{};
     const adapter = mock.adapter();
 
@@ -99,13 +117,15 @@ test "VT adapter boundary is mock-only and validates sizes" {
     try std.testing.expect(cursor.visible);
 
     const title = try adapter.title(pane_id);
-    try std.testing.expectEqualStrings("mock-local", title);
+    try std.testing.expectEqualStrings("contract-local", title);
 
     try adapter.destroy(pane_id);
     try std.testing.expect(mock.destroyed);
 
     try std.testing.expectError(vt.AdapterError.InvalidSize, adapter.resize(pane_id, .{ .rows = 0, .cols = 120 }));
     try std.testing.expectError(vt.AdapterError.Unsupported, adapter.write("pane_missing", "x"));
+    try std.testing.expectEqualStrings("libghostty-vt-unavailable", vt.productionVtStatus());
+    try std.testing.expectError(vt.ghostty_adapter.GhosttyError.LibghosttyUnavailable, vt.requireProductionVt());
 }
 
 test "storage migrations define initial schema honestly" {
@@ -120,10 +140,13 @@ test "storage migrations define initial schema honestly" {
         "process_metadata",
         "notification_history",
         "scrollback_chunks",
+        "output_journals",
+        "agent_templates",
         "client_sessions",
         "protocol_version",
         "migration_state",
     }) |entity| {
         try std.testing.expect(storage.hasInitialSchemaEntity(entity));
     }
+    try std.testing.expect(!(storage.StateStorePlan{}).sqlite_available);
 }

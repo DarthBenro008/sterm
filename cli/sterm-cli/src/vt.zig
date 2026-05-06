@@ -1,4 +1,5 @@
 const std = @import("std");
+pub const ghostty_adapter = @import("vt/ghostty_adapter.zig");
 
 pub const AdapterError = error{
     Unsupported,
@@ -112,10 +113,10 @@ pub const Adapter = struct {
 };
 
 pub const MockAdapter = struct {
-    pub const name = "mock-only";
+    pub const name = "contract-mock-with-explicit-ghostty-gate";
 
     pane_id: []const u8 = "pane_mock_01",
-    title_text: []const u8 = "mock-local",
+    title_text: []const u8 = "contract-local",
     cells: []const u8 = "mock-cell-grid:v1",
     last_feed_len: usize = 0,
     last_write_len: usize = 0,
@@ -226,3 +227,11 @@ pub const MockAdapter = struct {
         self.destroyed = true;
     }
 };
+
+pub fn requireProductionVt() ghostty_adapter.GhosttyError!void {
+    return ghostty_adapter.requireAvailable();
+}
+
+pub fn productionVtStatus() []const u8 {
+    return ghostty_adapter.integration_status;
+}
