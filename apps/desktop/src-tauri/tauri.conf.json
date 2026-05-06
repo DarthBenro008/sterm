@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "sterm",
+  "version": "0.1.0",
+  "identifier": "dev.sterm.desktop",
+  "build": {
+    "beforeDevCommand": {
+      "script": "bun run dev",
+      "cwd": "../web"
+    },
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": {
+      "script": "bun run build",
+      "cwd": "../web"
+    },
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "sterm",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.png"],
+    "publisher": "sterm",
+    "category": "DeveloperTool",
+    "shortDescription": "Remote-first persistent terminal workspace",
+    "longDescription": "sterm is a remote-first persistent terminal workspace for AI-agent-heavy server workflows.",
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    }
+  }
+}

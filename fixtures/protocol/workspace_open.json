@@ -1,0 +1,6 @@
+{
+  "type": "workspace_open",
+  "request_id": "req_workspace_open_01",
+  "name": "agent-runner",
+  "root_dir": "/home/ubuntu/projects/app"
+}

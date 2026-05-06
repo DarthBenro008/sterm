@@ -1,0 +1,11 @@
+{
+  "type": "scrollback_chunk",
+  "pane_id": "pane_01",
+  "start_line": 31800,
+  "lines": [
+    "bun test",
+    "13 pass",
+    "0 fail"
+  ],
+  "has_more": true
+}

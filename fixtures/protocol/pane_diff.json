@@ -1,0 +1,9 @@
+{
+  "type": "pane_diff",
+  "pane_id": "pane_01",
+  "seq": 18392,
+  "dirty_rows": [
+    { "row": 22, "cells": "mock-dirty-row-22:v1" }
+  ],
+  "cursor": { "row": 22, "col": 21, "visible": true, "style": "block" }
+}

@@ -1,0 +1,6 @@
+{
+  "type": "notification",
+  "pane_id": "pane_01",
+  "level": "attention",
+  "reason": "agent-needs-approval"
+}

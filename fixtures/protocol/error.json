@@ -1,0 +1,6 @@
+{
+  "type": "error",
+  "code": "AUTH_REQUIRED",
+  "message": "Authentication is required before workspace or pane mutation.",
+  "retryable": false
+}

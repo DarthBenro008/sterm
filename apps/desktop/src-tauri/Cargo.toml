@@ -1,0 +1,24 @@
+[package]
+name = "sterm-desktop-backend"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "sterm"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1.0"
+sterm-bootstrap = { path = "../../../crates/sterm-bootstrap" }
+sterm-keychain = { path = "../../../crates/sterm-keychain" }
+sterm-protocol = { path = "../../../crates/sterm-protocol" }
+sterm-shared = { path = "../../../crates/sterm-shared" }
+sterm-ssh = { path = "../../../crates/sterm-ssh" }
+sterm-tunnel = { path = "../../../crates/sterm-tunnel" }
+tauri = { version = "2.11.1", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2.6.1", features = [] }

@@ -1,0 +1,18 @@
+{
+  "type": "health",
+  "status": "ok",
+  "protocol_version": 1,
+  "uptime_ms": 12345,
+  "checks": [
+    {
+      "name": "socket",
+      "status": "ok",
+      "detail": "unix socket reachable"
+    },
+    {
+      "name": "storage",
+      "status": "ok",
+      "detail": "sqlite schema version 1"
+    }
+  ]
+}

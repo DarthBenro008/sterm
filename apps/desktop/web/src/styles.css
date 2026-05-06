@@ -1,0 +1,143 @@
+:root {
+  color: #e5e7eb;
+  background: #090b10;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+button {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 0.55rem 0.75rem;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  min-height: 100vh;
+  background: var(--sterm-background, #090b10);
+  color: var(--sterm-foreground, #e5e7eb);
+}
+
+.sidebar {
+  border-right: 1px solid #1f2937;
+  padding: 1rem;
+}
+
+.brand {
+  color: var(--sterm-accent, #60a5fa);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 1.5rem;
+}
+
+.surface-label,
+.connection-note,
+.pane-card small,
+.pane-card footer {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.muted {
+  color: #9ca3af;
+}
+
+.workspace-card,
+.pane-row {
+  width: 100%;
+}
+
+.workspace-card {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+  text-align: left;
+}
+
+.pane-row,
+.toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.workspace-shell {
+  padding: 1rem;
+}
+
+.tab-rail {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pane-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.pane-card,
+.settings-panel,
+.notifications {
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  background: #111827;
+  padding: 1rem;
+}
+
+.pane-card header,
+.notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.terminal-canvas-mock {
+  background: #030712;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  min-height: 14rem;
+  overflow: auto;
+  padding: 1rem;
+  position: relative;
+}
+
+.terminal-canvas-mock pre {
+  font-family: Berkeley Mono, SFMono-Regular, Menlo, Consolas, monospace;
+  margin: 0;
+}
+
+.cursor {
+  background: var(--sterm-accent, #60a5fa);
+  display: inline-block;
+  height: 1rem;
+  opacity: 0.75;
+  width: 0.55rem;
+}
+
+.right-rail {
+  border-left: 1px solid #1f2937;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  padding: 1rem;
+}
+
+.notice {
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.notice.warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}

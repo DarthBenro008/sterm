@@ -1,0 +1,10 @@
+{
+  "type": "pane_snapshot",
+  "pane_id": "pane_01",
+  "seq": 18391,
+  "rows": 40,
+  "cols": 120,
+  "cursor": { "row": 22, "col": 14, "visible": true, "style": "block" },
+  "cells": "mock-cell-grid:v1",
+  "scrollback": { "available_lines": 32144, "window_start": 31800, "window_lines": 344 }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "hello",
+  "client_version": "0.1.0",
+  "protocol_version": 1,
+  "supported_features": [
+    "pane-diff-v1",
+    "scrollback-v1",
+    "notifications-v1",
+    "auth-token-ref-v1",
+    "workspace-ops-v1",
+    "health-logs-v1"
+  ]
+}

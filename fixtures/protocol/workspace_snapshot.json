@@ -1,0 +1,74 @@
+{
+  "type": "workspace_snapshot",
+  "machine": {
+    "id": "vm_01",
+    "hostname": "sterm-dev",
+    "user": "ubuntu",
+    "os": "linux",
+    "arch": "x86_64"
+  },
+  "workspace": {
+    "id": "ws_01",
+    "name": "agent-runner",
+    "root_dir": "/home/ubuntu/projects/app",
+    "active_tab_id": "tab_01"
+  },
+  "tabs": [
+    {
+      "id": "tab_01",
+      "title": "Agents",
+      "active_pane_id": "pane_01",
+      "split_tree": {
+        "type": "split",
+        "direction": "horizontal",
+        "ratio": 0.5,
+        "children": [
+          { "type": "pane", "pane_id": "pane_01" },
+          { "type": "pane", "pane_id": "pane_02" }
+        ]
+      }
+    }
+  ],
+  "panes": [
+    {
+      "id": "pane_01",
+      "workspace_id": "ws_01",
+      "tab_id": "tab_01",
+      "title": "Claude Agent",
+      "cwd": "/home/ubuntu/projects/app",
+      "shell": "/bin/bash",
+      "command": "claude",
+      "rows": 40,
+      "cols": 120,
+      "status": "running",
+      "process": {
+        "pid": 1201,
+        "pty_id": "pty_01",
+        "command": "claude",
+        "started_at": "2026-05-07T00:00:00Z"
+      },
+      "pty_id": "pty_01",
+      "vt_id": "vt_01"
+    },
+    {
+      "id": "pane_02",
+      "workspace_id": "ws_01",
+      "tab_id": "tab_01",
+      "title": "Tests",
+      "cwd": "/home/ubuntu/projects/app",
+      "shell": "/bin/bash",
+      "command": "bun test --watch",
+      "rows": 40,
+      "cols": 120,
+      "status": "running",
+      "process": {
+        "pid": 1202,
+        "pty_id": "pty_02",
+        "command": "bun test --watch",
+        "started_at": "2026-05-07T00:00:01Z"
+      },
+      "pty_id": "pty_02",
+      "vt_id": "vt_02"
+    }
+  ]
+}

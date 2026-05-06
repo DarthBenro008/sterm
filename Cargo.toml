@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = [
+  "apps/desktop/src-tauri",
+  "crates/sterm-bootstrap",
+  "crates/sterm-keychain",
+  "crates/sterm-protocol",
+  "crates/sterm-shared",
+  "crates/sterm-ssh",
+  "crates/sterm-tunnel",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://example.invalid/sterm"

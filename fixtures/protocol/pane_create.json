@@ -1,0 +1,10 @@
+{
+  "type": "pane_create",
+  "request_id": "req_pane_create_01",
+  "workspace_id": "ws_01",
+  "tab_id": "tab_01",
+  "cwd": "/home/ubuntu/projects/app",
+  "command": "bash",
+  "rows": 40,
+  "cols": 120
+}

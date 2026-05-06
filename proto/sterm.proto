@@ -1,0 +1,229 @@
+syntax = "proto3";
+
+package sterm.v1;
+
+message Hello {
+  string type = 1;
+  string client_version = 2;
+  uint32 protocol_version = 3;
+  repeated string supported_features = 4;
+}
+
+message HelloAck {
+  string type = 1;
+  string agent_version = 2;
+  uint32 protocol_version = 3;
+  repeated string supported_features = 4;
+}
+
+message Auth {
+  string type = 1;
+  string request_id = 2;
+  string token_ref = 3;
+  repeated string scopes = 4;
+}
+
+message WorkspaceOpen {
+  string type = 1;
+  string request_id = 2;
+  string name = 3;
+  string root_dir = 4;
+}
+
+message WorkspaceClose {
+  string type = 1;
+  string request_id = 2;
+  string workspace_id = 3;
+}
+
+message WorkspaceSnapshot {
+  string type = 1;
+  RemoteMachine machine = 2;
+  Workspace workspace = 3;
+  repeated Tab tabs = 4;
+  repeated Pane panes = 5;
+}
+
+message RemoteMachine {
+  string id = 1;
+  string hostname = 2;
+  string user = 3;
+  string os = 4;
+  string arch = 5;
+}
+
+message Workspace {
+  string id = 1;
+  string name = 2;
+  string root_dir = 3;
+  string active_tab_id = 4;
+}
+
+message Tab {
+  string id = 1;
+  string title = 2;
+  string active_pane_id = 3;
+  SplitNode split_tree = 4;
+}
+
+message SplitNode {
+  string type = 1;
+  string direction = 2;
+  double ratio = 3;
+  string pane_id = 4;
+  repeated SplitNode children = 5;
+}
+
+message Pane {
+  string id = 1;
+  string workspace_id = 2;
+  string tab_id = 3;
+  string title = 4;
+  string cwd = 5;
+  string shell = 6;
+  string command = 7;
+  uint32 rows = 8;
+  uint32 cols = 9;
+  string status = 10;
+  ProcessMetadata process = 11;
+  string pty_id = 12;
+  string vt_id = 13;
+}
+
+message ProcessMetadata {
+  uint32 pid = 1;
+  string pty_id = 2;
+  string command = 3;
+  string started_at = 4;
+}
+
+message PaneCreate {
+  string type = 1;
+  string request_id = 2;
+  string workspace_id = 3;
+  string tab_id = 4;
+  string cwd = 5;
+  string command = 6;
+  uint32 rows = 7;
+  uint32 cols = 8;
+}
+
+message PaneInput {
+  string type = 1;
+  string pane_id = 2;
+  uint64 seq = 3;
+  string bytes_base64 = 4;
+}
+
+message PaneResize {
+  string type = 1;
+  string pane_id = 2;
+  uint32 rows = 3;
+  uint32 cols = 4;
+}
+
+message PaneSnapshot {
+  string type = 1;
+  string pane_id = 2;
+  uint64 seq = 3;
+  uint32 rows = 4;
+  uint32 cols = 5;
+  Cursor cursor = 6;
+  string cells = 7;
+  ScrollbackWindow scrollback = 8;
+}
+
+message PaneDiff {
+  string type = 1;
+  string pane_id = 2;
+  uint64 seq = 3;
+  repeated DirtyRow dirty_rows = 4;
+  Cursor cursor = 5;
+}
+
+message DirtyRow {
+  uint32 row = 1;
+  string cells = 2;
+}
+
+message Cursor {
+  uint32 row = 1;
+  uint32 col = 2;
+  bool visible = 3;
+  string style = 4;
+}
+
+message ScrollbackWindow {
+  uint64 available_lines = 1;
+  uint64 window_start = 2;
+  uint64 window_lines = 3;
+}
+
+message ScrollbackChunk {
+  string type = 1;
+  string pane_id = 2;
+  uint64 start_line = 3;
+  repeated string lines = 4;
+  bool has_more = 5;
+}
+
+message Notification {
+  string type = 1;
+  string pane_id = 2;
+  string level = 3;
+  string reason = 4;
+}
+
+message Health {
+  string type = 1;
+  string status = 2;
+  uint32 protocol_version = 3;
+  uint64 uptime_ms = 4;
+  repeated HealthCheck checks = 5;
+}
+
+message HealthCheck {
+  string name = 1;
+  string status = 2;
+  string detail = 3;
+}
+
+message Logs {
+  string type = 1;
+  string scope = 2;
+  repeated LogEntry entries = 3;
+}
+
+message LogEntry {
+  string ts = 1;
+  string level = 2;
+  string message = 3;
+}
+
+message ErrorFrame {
+  string type = 1;
+  string code = 2;
+  string message = 3;
+  bool retryable = 4;
+}
+
+message FrameEnvelope {
+  oneof payload {
+    Hello hello = 1;
+    HelloAck hello_ack = 2;
+    Auth auth = 3;
+    WorkspaceOpen workspace_open = 4;
+    WorkspaceClose workspace_close = 5;
+    WorkspaceSnapshot workspace_snapshot = 6;
+    PaneCreate pane_create = 7;
+    PaneInput pane_input = 8;
+    PaneResize pane_resize = 9;
+    PaneSnapshot pane_snapshot = 10;
+    PaneDiff pane_diff = 11;
+    ScrollbackChunk scrollback_chunk = 12;
+    Notification notification = 13;
+    Health health = 14;
+    Logs logs = 15;
+    ErrorFrame error = 16;
+  }
+}
