@@ -17,7 +17,8 @@ Production hardening defaults:
   secrets, privileged operations, and destructive commands,
 - tunnel planning allows Unix sockets by default and loopback TCP only under an
   explicit local policy; public TCP remains disabled,
-- unlinked native dependencies are surfaced as explicit gates rather than hidden
-  success.
+- native dependency state is surfaced explicitly: production agent checks require
+  `libghostty-vt-linked`, while development builds that omit native features fail
+  with named unavailable gates rather than hidden success.
 
 These defaults are represented in Zig CLI helpers, Rust config/keychain abstractions, docs, and verification checks.

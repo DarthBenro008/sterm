@@ -405,5 +405,9 @@ export function fixturePath(name: string): string {
 }
 
 export async function loadFixtureFrame(name: string): Promise<ProtocolFrame> {
-  return parseProtocolFrame(await Bun.file(fixturePath(name)).json());
+  const bun = globalThis.Bun;
+  if (!bun?.file) {
+    throw new Error("Protocol fixture file loading requires Bun; browser code should import JSON fixtures directly.");
+  }
+  return parseProtocolFrame(await bun.file(fixturePath(name)).json());
 }

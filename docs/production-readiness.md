@@ -21,7 +21,7 @@ up the repository production-readiness contract.
 | Gate | Current state | Required production outcome | Ultragoal lane |
 | --- | --- | --- | --- |
 | Real Tauri runtime and signing | G002 complete: desktop app builds through a real Tauri v2 boundary; release signing preflight fails honestly when signing credentials are absent. | Desktop app can run/build through a real Tauri boundary; release signing is configured or fails with explicit missing-certificate evidence. | `G002-tauri-desktop-runtime` |
-| SSH/PTY/libghostty daemon gates | G003 complete for daemon/runtime/storage/process/PTY/VT adapter contracts; live VM PTY and linked `libghostty-vt` remain explicit environment blockers. | Daemon has durable state, safe process/PTY ownership, and a real integration boundary for PTY/libghostty or an honest compile-time unavailable gate. | `G003-agent-daemon-storage-process-vt` |
+| SSH/PTY/libghostty daemon gates | G003 complete for daemon/runtime/storage/process/PTY/VT adapter contracts; production agent builds now link Ghostty as a Zig dependency and report `libghostty-vt-linked`; local Tauri WebDriver SSH bootstrap smoke passes; deeper live VM PTY coverage remains an external environment gate. | Daemon has durable state, safe process/PTY ownership, and a real integration boundary for PTY/libghostty or an honest compile-time unavailable gate for development builds. | `G003-agent-daemon-storage-process-vt` |
 | Final protocol transport | G004 complete: production `STRM` transport framing/version negotiation exists across Rust, TypeScript, and Zig; fixtures remain golden semantic inputs. | Production transport framing/version negotiation exists, with Rust/TS/Zig compatibility and failure tests. | `G004-final-protocol-transport` |
 | Full production hardening | G005 complete: SSH/tunnel/bootstrap/keychain/security defaults have failure-mode tests and docs. | SSH/tunnel/bootstrap/keychain/process reliability defaults are hardened with failure-mode tests. | `G005-full-production-hardening` |
 | Mature UI polish | G006 adds an accessible fixture-backed desktop shell with explicit loading/error states, keyboard focus, command palette/shortcut surfaces, honest disabled live mutations, and dirty-region invariant tests. | Desktop UI has accessible navigation, resilient errors/loading, polished surfaces, and targeted tests without claiming live SSH bridge ownership. | `G006-mature-ui-polish` |
@@ -37,7 +37,7 @@ up the repository production-readiness contract.
 | Rust protocol fixtures | Implemented baseline | `crates/sterm-protocol`, `fixtures/protocol` |
 | TypeScript protocol/renderer/frontend tests | Implemented baseline | `packages/*`, `apps/desktop/web/tests` |
 | Tauri runnable app/signing | Implemented with honest signing gate | Tauri configs, `scripts/package-desktop.sh`, `scripts/check-release-signing.sh`, `docs/release.md` |
-| SSH/PTY/libghostty daemon boundary | Implemented with explicit native-link blockers | `cli/sterm-cli/src/daemon.zig`, `process.zig`, `pty.zig`, `vt.zig`, `docs/agent.md` |
+| SSH/PTY/libghostty daemon boundary | Implemented with linked Ghostty VT production gate | `cli/sterm-cli/src/daemon.zig`, `process.zig`, `pty.zig`, `vt.zig`, `docs/agent.md`, `scripts/check-libghostty-vt.sh` |
 | Final binary/production transport | Implemented | `crates/sterm-protocol/src/lib.rs`, `packages/protocol-client/src/index.ts`, `cli/sterm-cli/src/transport.zig`, `docs/protocol.md` |
 | Desktop UI resilience and accessibility | Implemented G006 baseline | `apps/desktop/web/src/App.tsx`, `apps/desktop/web/src/appState.ts`, `apps/desktop/web/tests/mock-shell.test.ts`, `packages/renderer/tests/render-model.test.ts` |
 | Multi-client/roaming/agent primitives | Implemented G007 baseline | `fixtures/protocol/client_session.json`, `fixtures/protocol/transport_offer.json`, `fixtures/protocol/agent_detection.json`, `cli/sterm-cli/src/session.zig`, `cli/sterm-cli/src/transport_mode.zig`, `cli/sterm-cli/src/notify.zig` |
@@ -51,5 +51,5 @@ The repository production-readiness contract is complete only when all
 risk-first gates above are implemented or fail closed with concrete external
 blocker evidence, and `bash scripts/verify.sh` passes. A passing build alone is
 not a live production-readiness claim; the final audit records remaining
-environment prerequisites for live VM, linked native dependencies, packet-loss
-UDP, and signed cross-platform release validation.
+environment prerequisites for live VM PTY depth, SQLite, packet-loss UDP, and
+signed cross-platform release validation.

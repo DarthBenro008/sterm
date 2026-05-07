@@ -53,7 +53,13 @@ fi
 if grep -RIn 'p[n]pm\|P[N]PM' . \
   --exclude-dir=.git \
   --exclude-dir=.omx \
+  --exclude-dir=.cache \
   --exclude-dir=node_modules \
+  --exclude-dir=dist \
+  --exclude-dir=target \
+  --exclude-dir=zig-out \
+  --exclude-dir=zig-cache \
+  --exclude-dir=.zig-cache \
   --exclude='bun.lockb' \
   --exclude='bun.lock' >/tmp/sterm-production-pm-grep.txt; then
   cat /tmp/sterm-production-pm-grep.txt >&2

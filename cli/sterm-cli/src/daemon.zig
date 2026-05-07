@@ -37,5 +37,5 @@ pub fn run(writer: anytype) !void {
 test "daemon plan validates production-safe foundations" {
     const plan = DaemonPlan{};
     try plan.validate();
-    try @import("std").testing.expectEqualStrings("libghostty-vt-unavailable", plan.vt_status);
+    try @import("std").testing.expectEqualStrings(vt.productionVtStatus(), plan.vt_status);
 }

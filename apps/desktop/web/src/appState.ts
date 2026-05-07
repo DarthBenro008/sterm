@@ -74,9 +74,8 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
   {
     id: "connect-vm",
     label: "Connect VM",
-    description: "Start SSH auth, bootstrap, tunnel, and protocol handshake.",
+    description: "Open SSH auth, bootstrap the Zig agent, tunnel, and attach the workspace.",
     shortcut: "⌘/Ctrl K",
-    disabledReason: "Waiting for live backend bridge wiring.",
   },
   {
     id: "split-right",

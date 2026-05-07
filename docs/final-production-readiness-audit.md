@@ -6,8 +6,8 @@ Status: PASS for the repository production-readiness contract, with explicit
 environment-impossible blockers listed below.
 
 This bundle is intentionally evidence-first. It does not claim that external
-SSH infrastructure, signing credentials, linked `libghostty-vt`, or real
-packet-loss UDP environments exist in this container. It does claim that every
+signing credentials or real packet-loss UDP environments exist in this
+container. It does claim that every
 PRD lane now has code, tests, docs, release gates, or an explicit fail-closed
 blocker.
 
@@ -29,7 +29,7 @@ blocker.
 
 | PRD success criterion | Evidence | Status |
 | --- | --- | --- |
-| Connect to a new VM and install `sterm-cli` automatically | Bootstrap plan is idempotent, uses `~/.sterm/bin/sterm-cli`, rejects privileged/destructive/secret-bearing commands, release builds agent artifacts with checksums. | PASS for executable plan; live VM execution is an environment blocker. |
+| Connect to a new VM and install `sterm-cli` automatically | Bootstrap plan is idempotent, uses `~/.sterm/bin/sterm-cli`, rejects privileged/destructive/secret-bearing commands, release builds agent artifacts with checksums, and the WebDriver SSH smoke creates `/root/iwashere.txt` through the desktop app against the local SSH target. | PASS for local SSH/bootstrap smoke; external VM host-key and fleet coverage remain environment-specific. |
 | Create workspace with multiple tabs and split panes | Shared protocol fixtures/types include workspace, tab, split tree, panes; Zig CLI exposes workspace/pane command surfaces. | PASS for protocol and command contract. |
 | Run AI agents in panes | Pane/process/PTY ownership contracts plus agent detection for Claude, Codex, aider, cursor-agent, opencode, custom, unknown. | PASS for daemon contract; live PTY execution is gated. |
 | Closing the Mac app does not kill remote processes | PRD ownership rule is enforced in docs and process/supervisor contracts; desktop frontend never owns terminal truth. | PASS for architecture and code boundary. |
@@ -46,8 +46,10 @@ blocker.
 Required evidence collected in this run:
 
 - `bash scripts/check-artifact-policy.sh`: PASS
-- `bash scripts/check-doctor-output.sh`: PASS
+- `bash scripts/check-doctor-output.sh`: PASS (`libghostty-vt-linked`)
+- `bash scripts/check-libghostty-vt.sh`: PASS
 - `bash scripts/build-agent.sh && bash scripts/check-release-artifacts.sh`: PASS
+- `bun run desktop:e2e:ssh`: PASS, with `/root/iwashere.txt` created by the Tauri SSH bootstrap flow
 - `bun run release:check`: PASS for local release preflight subset
   (artifact policy, doctor output, agent build, checksums; it is not a signed
   desktop release by itself)
@@ -62,9 +64,9 @@ external assets not present in this container:
 
 1. Live VM SSH/bootstrap/PTY integration requires a real target VM, credentials,
    host-key evidence, and a deployable `sterm-cli` binary.
-2. `libghostty-vt` and SQLite are not linked into this container build. The
-   remote agent exposes `libghostty-vt-unavailable` and `sqlite3-unlinked`
-   through doctor/status output instead of silently claiming success.
+2. SQLite is not linked into this container build. The remote agent exposes
+   `sqlite3-unlinked` through doctor/status output instead of silently claiming
+   durable native SQLite persistence.
 3. Signed macOS/Windows release artifacts require signing credentials and
    platform runners. The release scripts/workflow fail closed when credentials
    are absent.

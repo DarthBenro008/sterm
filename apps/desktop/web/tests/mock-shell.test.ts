@@ -42,7 +42,8 @@ describe("desktop web mock fixture shell", () => {
   test("documents command palette shortcuts while disabling fixture-only mutations", () => {
     expect(KEYBOARD_SHORTCUTS.map((shortcut) => shortcut.id)).toContain("command-palette");
     expect(KEYBOARD_SHORTCUTS.map((shortcut) => shortcut.id)).toContain("split-down");
-    expect(COMMAND_PALETTE_ACTIONS.find((action) => action.id === "connect-vm")?.disabledReason).toContain("live backend bridge");
+    expect(COMMAND_PALETTE_ACTIONS.find((action) => action.id === "connect-vm")?.description).toContain("bootstrap the Zig agent");
+    expect(COMMAND_PALETTE_ACTIONS.find((action) => action.id === "split-right")?.disabledReason).toContain("Fixture preview");
   });
 
   test("sanitizes load errors before rendering them", () => {

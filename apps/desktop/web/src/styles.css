@@ -51,6 +51,84 @@ input:focus-visible {
   outline-offset: 3px;
 }
 
+.connect-screen {
+  align-items: center;
+  background:
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.16), transparent 35rem),
+    var(--sterm-app-bg, #090b10);
+  color: var(--sterm-text, #e5e7eb);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.connect-card {
+  background: rgba(17, 24, 39, 0.94);
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 24px;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.38);
+  max-width: 560px;
+  padding: 2rem;
+  width: 100%;
+}
+
+.connect-card h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 0.35rem 0 0.75rem;
+}
+
+.connect-copy {
+  color: var(--sterm-muted-text, #9ca3af);
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+}
+
+.connect-copy code {
+  color: #bae6fd;
+}
+
+.connect-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.connect-form label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.connect-form label span {
+  color: #bae6fd;
+  font-weight: 700;
+}
+
+.connect-form input {
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: var(--sterm-text, #e5e7eb);
+  padding: 0.85rem 0.95rem;
+  width: 100%;
+}
+
+.connect-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.36);
+  border-radius: 12px;
+  color: #fecaca;
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.connect-submit {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(34, 211, 238, 0.78));
+  border-color: rgba(125, 211, 252, 0.75);
+  color: #020617;
+  font-weight: 800;
+  margin-top: 0.35rem;
+}
+
 .app-shell {
   background:
     radial-gradient(circle at top left, rgba(125, 211, 252, 0.12), transparent 34rem),
@@ -320,6 +398,37 @@ input:focus-visible {
   display: grid;
   gap: 0.8rem;
   margin: 0;
+}
+
+.bootstrap-steps {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bootstrap-steps li {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem;
+}
+
+.bootstrap-steps li.complete {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.32);
+}
+
+.bootstrap-steps strong {
+  color: #bbf7d0;
+}
+
+.bootstrap-steps span {
+  color: var(--sterm-muted-text, #9ca3af);
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .settings-panel dt {

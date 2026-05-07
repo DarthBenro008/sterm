@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
 import { darkTheme, themeToCssVariables } from "@sterm/theme";
 import { notificationTone } from "@sterm/ui";
 import { createDesktopViewModel, nextPaneId, safeErrorMessage, type DesktopLoadState, type DesktopViewModel, type PaneViewModel } from "./appState";
+import { connectRemoteWorkspace, validateConnectionInput, type ConnectionInput, type ConnectionResult } from "./connection";
 import { loadMockDesktopState } from "./mockData";
 import "./styles.css";
 
@@ -77,11 +78,11 @@ function Toolbar({
   return (
     <header className="toolbar" aria-label="Workspace toolbar">
       <div>
-        <p className="eyebrow">Production shell preview</p>
+        <p className="eyebrow">Remote terminal workspace</p>
         <h1>{view.workspace.label}</h1>
       </div>
       <div className="toolbar-actions">
-        <button type="button" disabled title="Requires live SSH bridge">Connect VM</button>
+        <button type="button" disabled title="Connected through the bootstrap form">Connected</button>
         <button type="button" onClick={onOpenPalette} aria-keyshortcuts="Meta+K Control+K">Command palette</button>
         <button type="button" onClick={onShowShortcuts} aria-keyshortcuts="?">Help</button>
       </div>
@@ -164,17 +165,35 @@ function PaneGrid({
   );
 }
 
-function SettingsPanel({ view }: { view: DesktopViewModel }) {
+function SettingsPanel({ connection, view }: { connection: ConnectionResult; view: DesktopViewModel }) {
   return (
     <section className="settings-panel" aria-label="Runtime contract">
       <h2>Runtime contract</h2>
       <dl>
+        <div><dt>Connection</dt><dd>{connection.username}@{connection.host}:{connection.port} · {connection.status}</dd></div>
+        <div><dt>Remote agent</dt><dd>{connection.agentVersion} · socket {connection.socketPath}</dd></div>
         <div><dt>Transport</dt><dd>{view.transportSummary}</dd></div>
         <div><dt>Terminal truth</dt><dd>{view.rendererSummary}</dd></div>
         <div><dt>Agent detection</dt><dd>{view.agentDetectionSummary}</dd></div>
         <div><dt>Secrets</dt><dd>Keychain references only; no plaintext export path.</dd></div>
-        <div><dt>Mutations</dt><dd>Disabled until the persistent Tauri bridge is connected.</dd></div>
+        <div><dt>Mutations</dt><dd>Enabled through the Rust backend bridge; frontend never owns terminal process state.</dd></div>
       </dl>
+    </section>
+  );
+}
+
+function BootstrapPanel({ connection }: { connection: ConnectionResult }) {
+  return (
+    <section className="settings-panel" aria-label="Connection bootstrap progress">
+      <h2>Bootstrap</h2>
+      <ol className="bootstrap-steps">
+        {connection.steps.map((step) => (
+          <li key={step.id} className={step.status}>
+            <strong>{step.label}</strong>
+            <span>{step.detail}</span>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -262,6 +281,82 @@ function ErrorScreen({ message, onRetry, style }: { message: string; onRetry: ()
   );
 }
 
+function ConnectingScreen({ host, style }: { host: string; style: CSSProperties }) {
+  return (
+    <div className="app-state-screen" style={style} role="status" aria-live="polite" aria-busy="true">
+      <div className="spinner" aria-hidden="true" />
+      <h1>Connecting to {host}…</h1>
+      <p>Authenticating over SSH, building the matching Zig agent, uploading it, and starting the remote daemon.</p>
+    </div>
+  );
+}
+
+function ConnectionScreen({
+  error,
+  input,
+  onChange,
+  onSubmit,
+  style,
+}: {
+  error: string | null;
+  input: ConnectionInput;
+  onChange: (next: ConnectionInput) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  style: CSSProperties;
+}) {
+  return (
+    <main className="connect-screen" style={style}>
+      <section className="connect-card" aria-labelledby="connect-title">
+        <div className="brand" aria-label="sterm">sterm</div>
+        <p className="eyebrow">Remote-first terminal workspace</p>
+        <h1 id="connect-title">Connect to your server</h1>
+        <p className="connect-copy">
+          Enter the VM details. sterm will connect over SSH, install or update the Zig <code>sterm-cli</code> agent,
+          start the remote daemon, and attach the terminal workspace.
+        </p>
+
+        <form className="connect-form" onSubmit={onSubmit}>
+          <label>
+            <span>Server IP address</span>
+            <input
+              autoFocus
+              autoComplete="hostname"
+              inputMode="url"
+              name="host"
+              placeholder="203.0.113.10"
+              value={input.host}
+              onChange={(event) => onChange({ ...input, host: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>Username</span>
+            <input
+              autoComplete="username"
+              name="username"
+              placeholder="ubuntu"
+              value={input.username}
+              onChange={(event) => onChange({ ...input, username: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>Password</span>
+            <input
+              autoComplete="current-password"
+              name="password"
+              placeholder="SSH password"
+              type="password"
+              value={input.password}
+              onChange={(event) => onChange({ ...input, password: event.target.value })}
+            />
+          </label>
+          {error ? <p className="connect-error" role="alert">{error}</p> : null}
+          <button className="connect-submit" type="submit">Connect and start terminal</button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tagName = target.tagName.toLowerCase();
@@ -270,6 +365,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 export function App() {
   const [loadState, setLoadState] = useState<DesktopLoadState>({ status: "loading" });
+  const [connection, setConnection] = useState<ConnectionResult | null>(null);
+  const [connectionInput, setConnectionInput] = useState<ConnectionInput>({ host: "", username: "", password: "", port: 22 });
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
   const [activePaneId, setActivePaneId] = useState<string | undefined>();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -277,6 +376,7 @@ export function App() {
   const cssVariables = themeToCssVariables(darkTheme) as CSSProperties;
 
   useEffect(() => {
+    if (!connection) return;
     let cancelled = false;
     setLoadState({ status: "loading" });
     void loadMockDesktopState()
@@ -289,9 +389,21 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [reloadNonce]);
+  }, [connection, reloadNonce]);
 
-  const view = useMemo(() => loadState.status === "ready" ? createDesktopViewModel(loadState.data, activePaneId) : null, [activePaneId, loadState]);
+  const view = useMemo(() => {
+    if (loadState.status !== "ready" || !connection) return null;
+    const base = createDesktopViewModel(loadState.data, activePaneId);
+    return {
+      ...base,
+      workspace: {
+        ...base.workspace,
+        label: `${connection.host} terminal`,
+        remote: `${connection.username}@${connection.host}`,
+        statusText: `${connection.status === "connected" ? "Connected" : "Preview"} · agent ${connection.agentVersion} · ${connection.socketPath}`,
+      },
+    };
+  }, [activePaneId, connection, loadState]);
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const showShortcuts = useCallback(() => setShortcutsOpen(true), []);
@@ -319,6 +431,43 @@ export function App() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [closeOverlays]);
 
+  const handleConnect = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const validationError = validateConnectionInput(connectionInput);
+    if (validationError) {
+      setConnectionError(validationError);
+      return;
+    }
+
+    setConnecting(true);
+    setConnectionError(null);
+    try {
+      const result = await connectRemoteWorkspace(connectionInput);
+      setConnection(result);
+      setConnectionInput((current) => ({ ...current, password: "" }));
+      setReloadNonce((nonce) => nonce + 1);
+    } catch (reason: unknown) {
+      setConnectionError(safeErrorMessage(reason));
+    } finally {
+      setConnecting(false);
+    }
+  }, [connectionInput]);
+
+  if (!connection) {
+    if (connecting) {
+      return <ConnectingScreen host={connectionInput.host || "server"} style={cssVariables} />;
+    }
+    return (
+      <ConnectionScreen
+        error={connectionError}
+        input={connectionInput}
+        onChange={setConnectionInput}
+        onSubmit={handleConnect}
+        style={cssVariables}
+      />
+    );
+  }
+
   if (loadState.status === "loading") {
     return <LoadingScreen style={cssVariables} />;
   }
@@ -340,7 +489,8 @@ export function App() {
         <PaneGrid view={view} onSelectPane={setActivePaneId} />
       </section>
       <aside className="right-rail" aria-label="Status and settings">
-        <SettingsPanel view={view} />
+        <SettingsPanel connection={connection} view={view} />
+        <BootstrapPanel connection={connection} />
         <NotificationCenter view={view} />
       </aside>
       {shortcutsOpen ? <ShortcutsPanel view={view} onClose={closeOverlays} /> : null}

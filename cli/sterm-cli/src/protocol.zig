@@ -93,17 +93,26 @@ pub const ValidationError = error{
 };
 
 pub fn validateFixture(allocator: std.mem.Allocator, fixture: Fixture) !void {
-    var threaded = std.Io.Threaded.init(allocator, .{});
-    defer threaded.deinit();
-    const io = threaded.io();
-
-    const source = try std.Io.Dir.cwd().readFileAlloc(io, fixture.path, allocator, .limited(1024 * 1024));
+    const source = try readFixtureFile(allocator, fixture.path);
     defer allocator.free(source);
 
     var parsed = try std.json.parseFromSlice(std.json.Value, allocator, source, .{});
     defer parsed.deinit();
 
     try validateValue(fixture, parsed.value);
+}
+
+fn readFixtureFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    if (comptime @hasDecl(std, "fs")) {
+        if (comptime @hasDecl(std.fs, "cwd")) {
+            return std.fs.cwd().readFileAlloc(allocator, path, 1024 * 1024);
+        }
+    }
+
+    var threaded = std.Io.Threaded.init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+    return std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024));
 }
 
 pub fn validateValue(fixture: Fixture, value: std.json.Value) ValidationError!void {

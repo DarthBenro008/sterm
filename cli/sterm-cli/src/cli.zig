@@ -39,8 +39,8 @@ const commands = [_]CommandSpec{
     .{ .usage = "sterm logs [pane_id]", .summary = "read daemon or pane logs" },
 };
 
-pub fn run(init: std.process.Init, stdout: *std.Io.Writer, stderr: *std.Io.Writer) !void {
-    var iterator = try std.process.Args.Iterator.initAllocator(init.minimal.args, init.gpa);
+pub fn run(stdout: anytype, stderr: anytype) !void {
+    var iterator = try std.process.argsWithAllocator(std.heap.page_allocator);
     defer iterator.deinit();
     _ = iterator.next();
 
@@ -55,7 +55,7 @@ pub fn run(init: std.process.Init, stdout: *std.Io.Writer, stderr: *std.Io.Write
     try runArgs(args_buffer[0..args_len], stdout, stderr);
 }
 
-pub fn runArgs(args: []const []const u8, stdout: *std.Io.Writer, stderr: *std.Io.Writer) !void {
+pub fn runArgs(args: []const []const u8, stdout: anytype, stderr: anytype) !void {
     if (args.len == 0 or eql(args[0], "help") or eql(args[0], "--help") or eql(args[0], "-h")) {
         try printHelp(stdout);
         return;
@@ -119,7 +119,7 @@ pub fn runArgs(args: []const []const u8, stdout: *std.Io.Writer, stderr: *std.Io
     return CliError.UnknownCommand;
 }
 
-fn daemon(stdout: *std.Io.Writer, args: []const []const u8) !void {
+fn daemon(stdout: anytype, args: []const []const u8) !void {
     var socket_path: []const u8 = socket.default_socket_path;
     var home: []const u8 = runtime.default_home;
     var index: usize = 0;
@@ -158,7 +158,7 @@ fn daemon(stdout: *std.Io.Writer, args: []const []const u8) !void {
     , .{ home, socket_path, security.secret_file_mode_octal, storage.default_state_dir, plan.vt_status, session.status(), transport_mode.status(), notify.status() });
 }
 
-fn workspace(args: []const []const u8, stdout: *std.Io.Writer) !void {
+fn workspace(args: []const []const u8, stdout: anytype) !void {
     if (args.len == 1 and eql(args[0], "list")) {
         try stdout.writeAll("workspace list: [] (daemon offline; state store configured)\n");
         return;
@@ -174,7 +174,7 @@ fn workspace(args: []const []const u8, stdout: *std.Io.Writer) !void {
     return CliError.InvalidArgument;
 }
 
-fn pane(args: []const []const u8, stdout: *std.Io.Writer) !void {
+fn pane(args: []const []const u8, stdout: anytype) !void {
     if (args.len >= 1 and args.len <= 3 and eql(args[0], "create")) {
         const workspace_id = if (args.len >= 2) args[1] else "ws_01";
         const command = if (args.len == 3) args[2] else "";
@@ -203,7 +203,7 @@ fn pane(args: []const []const u8, stdout: *std.Io.Writer) !void {
     return CliError.InvalidArgument;
 }
 
-fn printHelp(writer: *std.Io.Writer) !void {
+fn printHelp(writer: anytype) !void {
     try writer.writeAll("sterm remote CLI\n\nCommands:\n");
     for (commands) |command| {
         try writer.print("  {s}\n      {s}\n", .{ command.usage, command.summary });

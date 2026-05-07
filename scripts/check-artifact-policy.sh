@@ -6,6 +6,7 @@ cd "$ROOT"
 
 ignored_paths=(
   "node_modules/"
+  ".cache/"
   "dist/"
   "target/"
   "zig-out/"
@@ -20,7 +21,7 @@ for path in "${ignored_paths[@]}"; do
   fi
 done
 
-if tracked_generated="$(git ls-files 'dist/*' '*/dist/*' 'target/*' '*/target/*' 'zig-out/*' '*/zig-out/*' 'zig-cache/*' '*/zig-cache/*' '.zig-cache/*' '*/.zig-cache/*')" && [[ -n "$tracked_generated" ]]; then
+if tracked_generated="$(git ls-files '.cache/*' '*/.cache/*' 'dist/*' '*/dist/*' 'target/*' '*/target/*' 'zig-out/*' '*/zig-out/*' 'zig-cache/*' '*/zig-cache/*' '.zig-cache/*' '*/.zig-cache/*')" && [[ -n "$tracked_generated" ]]; then
   echo "artifact policy: generated artifacts are tracked:" >&2
   echo "$tracked_generated" >&2
   exit 1

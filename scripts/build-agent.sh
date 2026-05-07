@@ -4,17 +4,26 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENT_DIR="$ROOT/cli/sterm-cli"
 OUT_DIR="${STERM_AGENT_DIST:-$ROOT/dist/agent}"
+WITH_GHOSTTY_VT="${STERM_AGENT_WITH_GHOSTTY_VT:-1}"
 
-if ! command -v zig >/dev/null 2>&1 && [[ -x /root/zig/zig ]]; then
-  export PATH="/root/zig:$PATH"
+build_flags=()
+if [[ "$WITH_GHOSTTY_VT" != "0" && "$WITH_GHOSTTY_VT" != "false" && "$WITH_GHOSTTY_VT" != "no" ]]; then
+  build_flags+=("-Dghostty-vt=true")
+  ZIG_BIN="${STERM_ZIG:-$ROOT/scripts/zig-ghostty.sh}"
+else
+  ZIG_BIN="${STERM_ZIG:-zig}"
+
+  if ! command -v "$ZIG_BIN" >/dev/null 2>&1 && [[ -x /root/zig/zig ]]; then
+    export PATH="/root/zig:$PATH"
+  fi
+
+  if ! command -v "$ZIG_BIN" >/dev/null 2>&1 && [[ -f "$HOME/.zshrc" ]]; then
+    # shellcheck disable=SC1090
+    source "$HOME/.zshrc" >/dev/null 2>&1 || true
+  fi
 fi
 
-if ! command -v zig >/dev/null 2>&1 && [[ -f "$HOME/.zshrc" ]]; then
-  # shellcheck disable=SC1090
-  source "$HOME/.zshrc" >/dev/null 2>&1 || true
-fi
-
-if ! command -v zig >/dev/null 2>&1; then
+if ! command -v "$ZIG_BIN" >/dev/null 2>&1 && [[ ! -x "$ZIG_BIN" ]]; then
   echo "agent build: zig is required" >&2
   exit 1
 fi
@@ -45,7 +54,7 @@ for target in $targets; do
 
   (
     cd "$AGENT_DIR"
-    zig build "${args[@]}" "$@"
+    "$ZIG_BIN" build "${build_flags[@]}" "${args[@]}" "$@"
   )
 
   binary="$AGENT_DIR/zig-out/bin/sterm-cli"

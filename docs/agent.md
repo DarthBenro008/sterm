@@ -28,6 +28,8 @@ G007 adds daemon-owned coordination primitives for:
   custom commands, and low-confidence unknown panes.
 
 `libghostty-vt` remains isolated behind
-`cli/sterm-cli/src/vt/ghostty_adapter.zig`. When the library is not linked, the
-agent reports `libghostty-vt-unavailable` explicitly instead of silently moving
-VT parsing into the frontend.
+`cli/sterm-cli/src/vt/ghostty_adapter.zig`. Production agent builds use Ghostty
+as a Zig package dependency (`-Dghostty-vt=true`) and report
+`libghostty-vt-linked` through status/doctor. Development builds that omit the
+flag still fail honestly with `libghostty-vt-unavailable` instead of moving VT
+parsing into the frontend.

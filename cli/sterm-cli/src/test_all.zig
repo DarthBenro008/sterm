@@ -142,8 +142,17 @@ test "VT adapter boundary validates sizes and gates missing libghostty honestly"
 
     try std.testing.expectError(vt.AdapterError.InvalidSize, adapter.resize(pane_id, .{ .rows = 0, .cols = 120 }));
     try std.testing.expectError(vt.AdapterError.Unsupported, adapter.write("pane_missing", "x"));
-    try std.testing.expectEqualStrings("libghostty-vt-unavailable", vt.productionVtStatus());
-    try std.testing.expectError(vt.ghostty_adapter.GhosttyError.LibghosttyUnavailable, vt.requireProductionVt());
+    if (vt.ghostty_adapter.compiled) {
+        try std.testing.expectEqualStrings("libghostty-vt-linked", vt.productionVtStatus());
+        try vt.requireProductionVt();
+
+        const plain = try vt.ghostty_adapter.smokePlainString(std.testing.allocator);
+        defer std.testing.allocator.free(plain);
+        try std.testing.expect(std.mem.indexOf(u8, plain, "ghostty-vt") != null);
+    } else {
+        try std.testing.expectEqualStrings("libghostty-vt-unavailable", vt.productionVtStatus());
+        try std.testing.expectError(vt.ghostty_adapter.GhosttyError.LibghosttyUnavailable, vt.requireProductionVt());
+    }
 }
 
 test "storage migrations define initial schema honestly" {

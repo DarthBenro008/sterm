@@ -1,4 +1,9 @@
-import { loadFixtureFrame, type AgentDetectionFrame, type NotificationFrame, type PaneDiffFrame, type PaneSnapshotFrame, type WorkspaceSnapshotFrame } from "@sterm/protocol-client";
+import { parseProtocolFrame, type AgentDetectionFrame, type NotificationFrame, type PaneDiffFrame, type PaneSnapshotFrame, type WorkspaceSnapshotFrame } from "@sterm/protocol-client";
+import agentDetectionFixture from "../../../../fixtures/protocol/agent_detection.json";
+import notificationFixture from "../../../../fixtures/protocol/notification.json";
+import paneDiffFixture from "../../../../fixtures/protocol/pane_diff.json";
+import paneSnapshotFixture from "../../../../fixtures/protocol/pane_snapshot.json";
+import workspaceSnapshotFixture from "../../../../fixtures/protocol/workspace_snapshot.json";
 
 export interface MockDesktopState {
   workspace: WorkspaceSnapshotFrame;
@@ -9,13 +14,11 @@ export interface MockDesktopState {
 }
 
 export async function loadMockDesktopState(): Promise<MockDesktopState> {
-  const [workspace, paneSnapshot, paneDiff, notification, agentDetection] = await Promise.all([
-    loadFixtureFrame("workspace_snapshot"),
-    loadFixtureFrame("pane_snapshot"),
-    loadFixtureFrame("pane_diff"),
-    loadFixtureFrame("notification"),
-    loadFixtureFrame("agent_detection"),
-  ]);
+  const workspace = parseProtocolFrame(workspaceSnapshotFixture);
+  const paneSnapshot = parseProtocolFrame(paneSnapshotFixture);
+  const paneDiff = parseProtocolFrame(paneDiffFixture);
+  const notification = parseProtocolFrame(notificationFixture);
+  const agentDetection = parseProtocolFrame(agentDetectionFixture);
 
   if (
     workspace.type !== "workspace_snapshot" ||

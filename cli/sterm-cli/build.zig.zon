@@ -1,0 +1,17 @@
+.{
+    .name = .sterm_cli,
+    .version = "0.1.0",
+    .fingerprint = 0xdd229f7a38f68da7,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .ghostty = .{
+            .url = "git+https://github.com/ghostty-org/ghostty.git#0deaac08ed1a95330346afabbad03da701708331",
+            .hash = "ghostty-1.3.2-dev-5UdBC5IcDwVB7zAs-dhqGkm0UafoQZVUSAugavBBjUe7",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
