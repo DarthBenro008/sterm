@@ -17,6 +17,7 @@
     "desktop:signing-check": "bash scripts/check-release-signing.sh",
     "agent:build": "bash scripts/build-agent.sh",
     "release:check": "bash scripts/check-artifact-policy.sh && bash scripts/check-doctor-output.sh && bash scripts/build-agent.sh && bash scripts/check-release-artifacts.sh",
+    "final:check": "bash scripts/check-final-readiness.sh",
     "verify:production": "bash scripts/check-production-readiness.sh",
     "verify": "bash scripts/verify.sh"
   },

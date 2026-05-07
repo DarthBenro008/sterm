@@ -1,22 +1,26 @@
-# Roadmap and deferred scope ledger
+# Roadmap and production readiness ledger
 
 ## Risk-first production lanes
 
 | Item | Lane | Status |
 | --- | --- | --- |
-| Real Tauri runtime and signing-ready release | desktop/release | active in `$ultragoal` G002 |
-| Real SSH/PTY/libghostty E2E | integration | active in `$ultragoal` G003 |
-| Final protocol transport | protocol | active in `$ultragoal` G004 |
-| Full production hardening | security/reliability | active in `$ultragoal` G005 |
+| Real Tauri runtime and signing-ready release | desktop/release | completed in `$ultragoal` G002 |
+| SSH/PTY/libghostty daemon/native-link gates | integration | completed as daemon foundations plus explicit native-link blockers in `$ultragoal` G003; live VM E2E remains an external prerequisite |
+| Final protocol transport | protocol | completed in `$ultragoal` G004 |
+| Full production hardening | security/reliability | completed in `$ultragoal` G005 |
 | Mature UI polish | frontend/ux | completed in `$ultragoal` G006 |
 | Multi-client mode | protocol/agent | completed in `$ultragoal` G007 |
 | Mosh/UDP transport | transport | completed as encrypted roaming-UDP boundary in `$ultragoal` G007 |
 | Exhaustive agent detection | notifications/agent-workflows | completed as builtin detector/evidence contract in `$ultragoal` G007 |
 | CI/release/observability/doctor gates | release/ops | completed in `$ultragoal` G008 |
 
-## Open PRD questions carried forward
+## Open PRD questions resolved or gated
 
-- `libghostty-vt` API stability: adapter isolation exists; vendoring/version policy is handled by G003.
-- Multi-client support: the previous one-client stance is superseded by G007.
-- Process resilience: supervisor separation moves into G003/G005.
-- Transport evolution: SSH tunnel plus Mosh/UDP-compatible boundaries move into G007.
+- `libghostty-vt` API stability: adapter isolation exists and unlinked builds fail
+  explicitly with `libghostty-vt-unavailable`.
+- Multi-client support: G007 implements a single-writer/read-only-observer
+  contract.
+- Process resilience: G003/G005 provide per-pane supervisor/process-group
+  contracts and security gates.
+- Transport evolution: G007 adds SSH-control plus encrypted roaming-UDP stream
+  offers with SSH fallback.

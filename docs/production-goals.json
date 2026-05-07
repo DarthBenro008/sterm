@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-07T00:00:00Z",
+  "source": "tracked production readiness mirror for CI; .omx ultragoal ledger remains local runtime state",
+  "goals": [
+    {
+      "id": "G001-production-readiness-contract",
+      "status": "complete",
+      "evidence": "docs/production-readiness.md, docs/prd-gap-analysis.md, scripts/check-production-readiness.sh, scripts/verify.sh"
+    },
+    {
+      "id": "G002-tauri-desktop-runtime",
+      "status": "complete",
+      "evidence": "apps/desktop/src-tauri/tauri.conf.json, platform bundle configs, scripts/package-desktop.sh, docs/release.md"
+    },
+    {
+      "id": "G003-agent-daemon-storage-process-vt",
+      "status": "complete",
+      "evidence": "cli/sterm-cli/src/daemon.zig, runtime.zig, storage.zig, process.zig, pty.zig, vt.zig, docs/agent.md"
+    },
+    {
+      "id": "G004-final-protocol-transport",
+      "status": "complete",
+      "evidence": "crates/sterm-protocol/src/lib.rs, packages/protocol-client/src/index.ts, cli/sterm-cli/src/transport.zig, docs/protocol.md"
+    },
+    {
+      "id": "G005-full-production-hardening",
+      "status": "complete",
+      "evidence": "crates/sterm-ssh, crates/sterm-bootstrap, crates/sterm-keychain, crates/sterm-tunnel, cli/sterm-cli/src/security.zig, docs/security.md"
+    },
+    {
+      "id": "G006-mature-ui-polish",
+      "status": "complete",
+      "evidence": "apps/desktop/web/src/App.tsx, apps/desktop/web/src/appState.ts, packages/renderer/src/index.ts, docs/rendering.md"
+    },
+    {
+      "id": "G007-multi-client-mosh-agent-detection",
+      "status": "complete",
+      "evidence": "fixtures/protocol/client_session.json, fixtures/protocol/transport_offer.json, fixtures/protocol/agent_detection.json, cli/sterm-cli/src/session.zig, transport_mode.zig, notify.zig"
+    },
+    {
+      "id": "G008-ci-release-observability-doctor",
+      "status": "complete",
+      "evidence": ".github/workflows/ci.yml, .github/workflows/release.yml, scripts/check-doctor-output.sh, scripts/check-release-artifacts.sh, scripts/check-artifact-policy.sh"
+    },
+    {
+      "id": "G009-final-production-readiness-audit",
+      "status": "complete",
+      "evidence": "docs/final-production-readiness-audit.md, scripts/check-final-readiness.sh, bash scripts/verify.sh"
+    }
+  ]
+}

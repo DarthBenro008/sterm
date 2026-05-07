@@ -29,6 +29,7 @@ fi
 
 run_required "no legacy package-manager references outside .omx/.git" bash -lc "! grep -RIn 'p[n]pm\\|P[N]PM' . --exclude-dir=.git --exclude-dir=.omx --exclude-dir=node_modules --exclude='bun.lockb' --exclude='bun.lock' >/tmp/sterm-package-manager-grep.txt || (cat /tmp/sterm-package-manager-grep.txt; false)"
 run_required "production readiness contract" bash scripts/check-production-readiness.sh
+run_required "final readiness audit" bash scripts/check-final-readiness.sh
 run_required "desktop signing optional gate" bash scripts/check-release-signing.sh
 run_required "artifact ignore policy" bash scripts/check-artifact-policy.sh
 run_required "doctor output contract" bash scripts/check-doctor-output.sh

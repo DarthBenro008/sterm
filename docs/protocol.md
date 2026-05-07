@@ -37,8 +37,7 @@ The shared JSON fixture set currently covers every first-wave frame family:
 
 ## Multi-client and roaming transport stance
 
-G007 makes the previously deferred multi-client/Mosh/agent-detection lane
-explicit in the protocol:
+G007 makes the multi-client/Mosh/agent-detection lane explicit in the protocol:
 
 - multi-client attach starts as one active read/write lease per workspace;
   read-only observers must be explicitly allowed by policy,
