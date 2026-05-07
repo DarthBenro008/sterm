@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { loadFixtureFrame, type PaneDiffFrame, type PaneSnapshotFrame } from "@sterm/protocol-client";
 import {
   applyPaneRenderDiff,
+  assertDirtyRegionBounds,
   buildCanvasCommands,
   consumeDirtyRegions,
   createPaneRenderState,
   defaultRendererMetrics,
+  mergeDirtyRegions,
   scheduleRender,
 } from "../src";
 
@@ -35,6 +37,30 @@ describe("snapshot/diff dirty-region model", () => {
     const state = createPaneRenderState(snapshot);
     expect(applyPaneRenderDiff(state, { type: "pane_diff", pane_id: "pane_01", seq: 1, dirty_rows: [], cursor: snapshot.cursor })).toBe(state);
     expect(() => applyPaneRenderDiff(state, { type: "pane_diff", pane_id: "pane_other", seq: 99999, dirty_rows: [], cursor: snapshot.cursor })).toThrow("Cannot apply diff");
+  });
+
+  test("keeps dirty regions bounded and reason-aware", async () => {
+    const snapshot = (await loadFixtureFrame("pane_snapshot")) as PaneSnapshotFrame;
+    const state = createPaneRenderState(snapshot);
+
+    expect(mergeDirtyRegions([
+      { row: 2, colStart: 0, colEnd: 4, reason: "diff" },
+      { row: 2, colStart: 4, colEnd: 7, reason: "diff" },
+      { row: 2, colStart: 4, colEnd: 5, reason: "cursor" },
+    ])).toEqual([
+      { row: 2, colStart: 0, colEnd: 7, reason: "diff" },
+      { row: 2, colStart: 4, colEnd: 5, reason: "cursor" },
+    ]);
+
+    assertDirtyRegionBounds({ row: 0, colStart: 0, colEnd: 1, reason: "diff" }, state);
+    expect(() => assertDirtyRegionBounds({ row: state.rows, colStart: 0, colEnd: 1, reason: "diff" }, state)).toThrow("outside pane bounds");
+    expect(() => applyPaneRenderDiff(state, {
+      type: "pane_diff",
+      pane_id: state.paneId,
+      seq: state.seq + 1,
+      dirty_rows: [{ row: state.rows + 1, cells: "" }],
+      cursor: snapshot.cursor,
+    })).toThrow("outside pane bounds");
   });
 
   test("builds Canvas-oriented commands without parsing terminal escapes", async () => {

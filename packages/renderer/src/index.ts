@@ -126,11 +126,27 @@ export function mergeDirtyRegions(regions: DirtyRegion[]): DirtyRegion[] {
   return merged;
 }
 
+export function assertDirtyRegionBounds(region: DirtyRegion, metrics: Pick<PaneRenderState, "rows" | "cols">): void {
+  if (!Number.isInteger(region.row) || region.row < 0 || region.row >= metrics.rows) {
+    throw new Error(`Dirty region row ${region.row} is outside pane bounds 0..${metrics.rows - 1}`);
+  }
+  if (!Number.isInteger(region.colStart) || !Number.isInteger(region.colEnd) || region.colStart < 0 || region.colEnd > metrics.cols || region.colStart >= region.colEnd) {
+    throw new Error(`Dirty region columns ${region.colStart}..${region.colEnd} are outside pane bounds 0..${metrics.cols}`);
+  }
+}
+
 export function applyPaneRenderDiff(state: PaneRenderState, diff: PaneDiffFrame): PaneRenderState {
   if (diff.pane_id !== state.paneId) {
     throw new Error(`Cannot apply diff for ${diff.pane_id} to pane ${state.paneId}`);
   }
   if (diff.seq <= state.seq) return state;
+  const diffRegions = diff.dirty_rows.map((row) => {
+    const region = { row: row.row, colStart: 0, colEnd: state.cols, reason: "diff" as const };
+    assertDirtyRegionBounds(region, state);
+    return region;
+  });
+  const cursorRegion = { row: diff.cursor.row, colStart: diff.cursor.col, colEnd: diff.cursor.col + 1, reason: "cursor" as const };
+  assertDirtyRegionBounds(cursorRegion, state);
   return {
     ...state,
     seq: diff.seq,
@@ -138,8 +154,8 @@ export function applyPaneRenderDiff(state: PaneRenderState, diff: PaneDiffFrame)
     cells: `${state.cells}|diff:${diff.seq}`,
     dirtyRegions: mergeDirtyRegions([
       ...state.dirtyRegions,
-      ...diff.dirty_rows.map((row) => ({ row: row.row, colStart: 0, colEnd: state.cols, reason: "diff" as const })),
-      { row: diff.cursor.row, colStart: diff.cursor.col, colEnd: diff.cursor.col + 1, reason: "cursor" as const },
+      ...diffRegions,
+      cursorRegion,
     ]),
   };
 }

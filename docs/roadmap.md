@@ -8,7 +8,7 @@
 | Real SSH/PTY/libghostty E2E | integration | active in `$ultragoal` G003 |
 | Final protocol transport | protocol | active in `$ultragoal` G004 |
 | Full production hardening | security/reliability | active in `$ultragoal` G005 |
-| Mature UI polish | frontend/ux | active in `$ultragoal` G006 |
+| Mature UI polish | frontend/ux | completed in `$ultragoal` G006 |
 | Multi-client mode | protocol/agent | active in `$ultragoal` G007 |
 | Mosh/UDP transport | transport | active in `$ultragoal` G007 |
 | Exhaustive agent detection | notifications/agent-workflows | active in `$ultragoal` G007 |
