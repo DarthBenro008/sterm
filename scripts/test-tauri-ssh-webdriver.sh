@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 missing=0
-for bin in bun cargo ssh sshpass scp tauri-driver WebKitWebDriver; do
+for bin in bun cargo ssh scp tauri-driver WebKitWebDriver; do
   if ! command -v "$bin" >/dev/null 2>&1; then
     echo "missing required command: $bin" >&2
     missing=1

@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
+use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 use sterm_bootstrap::BootstrapPlan;
 use sterm_protocol::{parse_frame, Frame};
 use sterm_shared::AppConfig;
@@ -89,28 +93,29 @@ pub struct RemoteConnectResult {
 /// Connect to a remote VM, upload the Zig agent, start the daemon command, and
 /// return the first workspace attachment summary used by the Tauri frontend.
 ///
-/// Password auth is intentionally delegated to OpenSSH via `sshpass -e` so the
-/// backend does not add a long-lived SSH library dependency or expose the
-/// secret in argv. Production keychain storage remains outside this command.
+/// Password auth is intentionally delegated to the platform OpenSSH client via
+/// a short-lived `SSH_ASKPASS` helper so the packaged app does not require
+/// users to install `sshpass` and the secret never appears in argv. Production
+/// keychain storage remains outside this command.
 pub fn connect_remote_workspace(payload: &str) -> Result<RemoteConnectResult, String> {
     let request: RemoteConnectRequest = serde_json::from_str(payload)
         .map_err(|err| format!("invalid connection payload: {err}"))?;
     validate_connect_request(&request)?;
 
-    require_command("sshpass")?;
     require_command("ssh")?;
     require_command("scp")?;
 
+    let askpass = Askpass::new()?;
     let repo_root = repo_root()?;
     let agent_binary = ensure_agent_binary(&repo_root)?;
-    let remote_home = run_ssh(&request, "printf '%s' \"$HOME\"")?;
+    let remote_home = run_ssh(&request, &askpass, "printf '%s' \"$HOME\"")?;
     let remote_home = remote_home.trim().to_string();
     if remote_home.is_empty() {
         return Err("remote home directory was empty".into());
     }
 
     let remote_tmp = "/tmp/sterm-cli";
-    run_scp(&request, &agent_binary, remote_tmp)?;
+    run_scp(&request, &askpass, &agent_binary, remote_tmp)?;
 
     let bootstrap_script = r#"set -eu
 mkdir -p "$HOME/.sterm/bin" "$HOME/.sterm/state" "$HOME/.sterm/logs"
@@ -120,7 +125,7 @@ install -m 755 /tmp/sterm-cli "$HOME/.sterm/bin/sterm-cli"
 "$HOME/.sterm/bin/sterm-cli" daemon --socket "$HOME/.sterm/sterm.sock" >"$HOME/.sterm/logs/sterm-cli.log" 2>&1 || true
 printf 'sterm webdriver ssh e2e\n' > /root/iwashere.txt
 "#;
-    run_ssh(&request, bootstrap_script)?;
+    run_ssh(&request, &askpass, bootstrap_script)?;
 
     Ok(RemoteConnectResult {
         status: ConnectionStatus::Connected,
@@ -137,7 +142,7 @@ printf 'sterm webdriver ssh e2e\n' > /root/iwashere.txt
             step(
                 "ssh-auth",
                 "SSH authenticated",
-                "Password authentication completed through OpenSSH.",
+                "Password authentication completed through OpenSSH askpass.",
             ),
             step(
                 "agent-build",
@@ -273,29 +278,75 @@ fn native_agent_artifact_name() -> String {
     format!("sterm-cli-{os}-{arch}")
 }
 
-fn run_ssh(request: &RemoteConnectRequest, remote_script: &str) -> Result<String, String> {
-    let mut command = sshpass_command(request);
+struct Askpass {
+    path: PathBuf,
+}
+
+impl Askpass {
+    fn new() -> Result<Self, String> {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|err| format!("failed to create askpass helper timestamp: {err}"))?
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "sterm-ssh-askpass-{}-{nanos}.sh",
+            std::process::id()
+        ));
+        fs::write(&path, "#!/bin/sh\nprintf '%s\\n' \"$STERM_SSH_PASSWORD\"\n")
+            .map_err(|err| format!("failed to write OpenSSH askpass helper: {err}"))?;
+        #[cfg(unix)]
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o700))
+            .map_err(|err| format!("failed to secure OpenSSH askpass helper: {err}"))?;
+        Ok(Self { path })
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl Drop for Askpass {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
+fn run_ssh(
+    request: &RemoteConnectRequest,
+    askpass: &Askpass,
+    remote_script: &str,
+) -> Result<String, String> {
+    let mut command = open_ssh_command(request, askpass, "ssh");
     command
-        .arg("ssh")
         .args(ssh_options(request))
         .arg(format!("{}@{}", request.username, request.host))
         .arg(remote_script);
     run_command(command, "ssh")
 }
 
-fn run_scp(request: &RemoteConnectRequest, local: &Path, remote: &str) -> Result<String, String> {
-    let mut command = sshpass_command(request);
+fn run_scp(
+    request: &RemoteConnectRequest,
+    askpass: &Askpass,
+    local: &Path,
+    remote: &str,
+) -> Result<String, String> {
+    let mut command = open_ssh_command(request, askpass, "scp");
     command
-        .arg("scp")
         .args(scp_options(request))
         .arg(local)
         .arg(format!("{}@{}:{remote}", request.username, request.host));
     run_command(command, "scp").map(|_| String::new())
 }
 
-fn sshpass_command(request: &RemoteConnectRequest) -> Command {
-    let mut command = Command::new("sshpass");
-    command.arg("-e").env("SSHPASS", &request.password);
+fn open_ssh_command(request: &RemoteConnectRequest, askpass: &Askpass, program: &str) -> Command {
+    let mut command = Command::new(program);
+    command
+        .env("SSH_ASKPASS", askpass.path())
+        .env("SSH_ASKPASS_REQUIRE", "force")
+        .env("STERM_SSH_PASSWORD", &request.password);
+    if std::env::var_os("DISPLAY").is_none() {
+        command.env("DISPLAY", "sterm");
+    }
     command
 }
 
@@ -311,6 +362,18 @@ fn ssh_options(request: &RemoteConnectRequest) -> Vec<String> {
         "LogLevel=ERROR".into(),
         "-o".into(),
         "ConnectTimeout=15".into(),
+        "-o".into(),
+        "BatchMode=no".into(),
+        "-o".into(),
+        "PreferredAuthentications=password,keyboard-interactive".into(),
+        "-o".into(),
+        "PasswordAuthentication=yes".into(),
+        "-o".into(),
+        "KbdInteractiveAuthentication=yes".into(),
+        "-o".into(),
+        "PubkeyAuthentication=no".into(),
+        "-o".into(),
+        "NumberOfPasswordPrompts=1".into(),
     ]
 }
 
@@ -383,10 +446,19 @@ mod tests {
         let serialized_step = serde_json::to_string(&step(
             "ssh-auth",
             "SSH authenticated",
-            "Password authentication completed through OpenSSH.",
+            "Password authentication completed through OpenSSH askpass.",
         ))
         .unwrap();
         assert!(!serialized_step.contains("super-secret"));
         assert_eq!(native_agent_artifact_name(), "sterm-cli-linux-x86_64");
+    }
+
+    #[test]
+    fn askpass_helper_does_not_store_password_in_script_body() {
+        let askpass = Askpass::new().unwrap();
+        let script = std::fs::read_to_string(askpass.path()).unwrap();
+        assert!(script.contains("STERM_SSH_PASSWORD"));
+        assert!(!script.contains("super-secret"));
+        assert!(askpass.path().is_file());
     }
 }
