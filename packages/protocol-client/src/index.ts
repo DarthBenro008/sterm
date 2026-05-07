@@ -1,4 +1,8 @@
 export const PROTOCOL_VERSION = 1;
+export const TRANSPORT_MAGIC = new Uint8Array([0x53, 0x54, 0x52, 0x4d]); // STRM
+export const TRANSPORT_WIRE_VERSION = 1;
+export const TRANSPORT_HEADER_BYTES = 12;
+export const TRANSPORT_MAX_PAYLOAD_BYTES = 16 * 1024 * 1024;
 
 export const FEATURES = [
   "pane-diff-v1",
@@ -238,6 +242,18 @@ export type StermFrame =
   | LogsFrame
   | ErrorFrame;
 
+export interface NegotiatedProtocol {
+  protocol_version: number;
+  shared_features: Feature[];
+}
+
+export class TransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TransportError";
+  }
+}
+
 export function createHello(clientVersion: string): HelloFrame {
   return {
     type: "hello",
@@ -274,6 +290,63 @@ export function assertProtocolVersion(frame: HelloFrame | HelloAckFrame): void {
   if (frame.protocol_version !== PROTOCOL_VERSION) {
     throw new Error(`Unsupported sterm protocol version ${frame.protocol_version}`);
   }
+}
+
+export function negotiateProtocol(hello: HelloFrame, ack: HelloAckFrame): NegotiatedProtocol {
+  assertProtocolVersion(hello);
+  assertProtocolVersion(ack);
+  return {
+    protocol_version: PROTOCOL_VERSION,
+    shared_features: hello.supported_features.filter((feature) => ack.supported_features.includes(feature)),
+  };
+}
+
+export function encodeTransportFrame(frame: ProtocolFrame): Uint8Array {
+  const payload = new TextEncoder().encode(JSON.stringify(frame));
+  if (payload.byteLength > TRANSPORT_MAX_PAYLOAD_BYTES) {
+    throw new TransportError(`Transport payload too large: ${payload.byteLength} bytes`);
+  }
+  const encoded = new Uint8Array(TRANSPORT_HEADER_BYTES + payload.byteLength);
+  encoded.set(TRANSPORT_MAGIC, 0);
+  const view = new DataView(encoded.buffer);
+  view.setUint16(4, TRANSPORT_WIRE_VERSION, false);
+  view.setUint16(6, PROTOCOL_VERSION, false);
+  view.setUint32(8, payload.byteLength, false);
+  encoded.set(payload, TRANSPORT_HEADER_BYTES);
+  return encoded;
+}
+
+export function decodeTransportFrame(bytes: Uint8Array): ProtocolFrame {
+  if (bytes.byteLength < TRANSPORT_HEADER_BYTES) {
+    throw new TransportError("Truncated transport frame");
+  }
+  for (let index = 0; index < TRANSPORT_MAGIC.byteLength; index += 1) {
+    if (bytes[index] !== TRANSPORT_MAGIC[index]) {
+      throw new TransportError("Bad transport magic");
+    }
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const wireVersion = view.getUint16(4, false);
+  if (wireVersion !== TRANSPORT_WIRE_VERSION) {
+    throw new TransportError(`Unsupported transport wire version ${wireVersion}`);
+  }
+  const protocolVersion = view.getUint16(6, false);
+  if (protocolVersion !== PROTOCOL_VERSION) {
+    throw new TransportError(`Unsupported sterm protocol version ${protocolVersion}`);
+  }
+  const payloadLength = view.getUint32(8, false);
+  if (payloadLength > TRANSPORT_MAX_PAYLOAD_BYTES) {
+    throw new TransportError(`Transport payload too large: ${payloadLength} bytes`);
+  }
+  const expectedLength = TRANSPORT_HEADER_BYTES + payloadLength;
+  if (bytes.byteLength < expectedLength) {
+    throw new TransportError("Truncated transport frame");
+  }
+  if (bytes.byteLength > expectedLength) {
+    throw new TransportError("Transport frame has trailing bytes");
+  }
+  const payload = new TextDecoder().decode(bytes.slice(TRANSPORT_HEADER_BYTES));
+  return parseProtocolFrame(JSON.parse(payload));
 }
 
 export function fixturePath(name: string): string {

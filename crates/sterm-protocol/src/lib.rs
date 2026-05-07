@@ -9,6 +9,10 @@ pub const FEATURE_NOTIFICATIONS: &str = "notifications-v1";
 pub const FEATURE_AUTH_TOKEN_REF: &str = "auth-token-ref-v1";
 pub const FEATURE_WORKSPACE_OPS: &str = "workspace-ops-v1";
 pub const FEATURE_HEALTH_LOGS: &str = "health-logs-v1";
+pub const TRANSPORT_MAGIC: [u8; 4] = *b"STRM";
+pub const TRANSPORT_WIRE_VERSION: u16 = 1;
+pub const TRANSPORT_HEADER_LEN: usize = 12;
+pub const TRANSPORT_MAX_PAYLOAD_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameType {
@@ -361,6 +365,121 @@ pub fn encode_frame(frame: &Frame) -> serde_json::Result<String> {
     serde_json::to_string(frame)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NegotiatedProtocol {
+    pub protocol_version: u32,
+    pub shared_features: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TransportError {
+    BadMagic,
+    UnsupportedWireVersion(u16),
+    UnsupportedProtocolVersion(u32),
+    PayloadTooLarge(usize),
+    Truncated,
+    TrailingBytes,
+    InvalidPayload(String),
+}
+
+impl std::fmt::Display for TransportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadMagic => f.write_str("bad transport magic"),
+            Self::UnsupportedWireVersion(version) => {
+                write!(f, "unsupported transport wire version {version}")
+            }
+            Self::UnsupportedProtocolVersion(version) => {
+                write!(f, "unsupported sterm protocol version {version}")
+            }
+            Self::PayloadTooLarge(size) => write!(f, "transport payload too large: {size} bytes"),
+            Self::Truncated => f.write_str("truncated transport frame"),
+            Self::TrailingBytes => f.write_str("transport frame has trailing bytes"),
+            Self::InvalidPayload(message) => write!(f, "invalid transport payload: {message}"),
+        }
+    }
+}
+
+impl std::error::Error for TransportError {}
+
+pub fn negotiate_protocol(
+    hello: &Hello,
+    hello_ack: &HelloAck,
+) -> Result<NegotiatedProtocol, TransportError> {
+    if hello.protocol_version != PROTOCOL_VERSION {
+        return Err(TransportError::UnsupportedProtocolVersion(
+            hello.protocol_version,
+        ));
+    }
+    if hello_ack.protocol_version != PROTOCOL_VERSION {
+        return Err(TransportError::UnsupportedProtocolVersion(
+            hello_ack.protocol_version,
+        ));
+    }
+    let shared_features = hello
+        .supported_features
+        .iter()
+        .filter(|feature| hello_ack.supported_features.contains(feature))
+        .cloned()
+        .collect();
+    Ok(NegotiatedProtocol {
+        protocol_version: PROTOCOL_VERSION,
+        shared_features,
+    })
+}
+
+pub fn encode_transport_frame(frame: &Frame) -> Result<Vec<u8>, TransportError> {
+    let payload =
+        encode_frame(frame).map_err(|err| TransportError::InvalidPayload(err.to_string()))?;
+    let payload = payload.as_bytes();
+    if payload.len() > TRANSPORT_MAX_PAYLOAD_BYTES {
+        return Err(TransportError::PayloadTooLarge(payload.len()));
+    }
+
+    let mut encoded = Vec::with_capacity(TRANSPORT_HEADER_LEN + payload.len());
+    encoded.extend_from_slice(&TRANSPORT_MAGIC);
+    encoded.extend_from_slice(&TRANSPORT_WIRE_VERSION.to_be_bytes());
+    encoded.extend_from_slice(&(PROTOCOL_VERSION as u16).to_be_bytes());
+    encoded.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+    encoded.extend_from_slice(payload);
+    Ok(encoded)
+}
+
+pub fn decode_transport_frame(bytes: &[u8]) -> Result<Frame, TransportError> {
+    if bytes.len() < TRANSPORT_HEADER_LEN {
+        return Err(TransportError::Truncated);
+    }
+    if bytes[0..4] != TRANSPORT_MAGIC[..] {
+        return Err(TransportError::BadMagic);
+    }
+
+    let wire_version = u16::from_be_bytes([bytes[4], bytes[5]]);
+    if wire_version != TRANSPORT_WIRE_VERSION {
+        return Err(TransportError::UnsupportedWireVersion(wire_version));
+    }
+
+    let protocol_version = u16::from_be_bytes([bytes[6], bytes[7]]) as u32;
+    if protocol_version != PROTOCOL_VERSION {
+        return Err(TransportError::UnsupportedProtocolVersion(protocol_version));
+    }
+
+    let payload_len = u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize;
+    if payload_len > TRANSPORT_MAX_PAYLOAD_BYTES {
+        return Err(TransportError::PayloadTooLarge(payload_len));
+    }
+    let expected_len = TRANSPORT_HEADER_LEN + payload_len;
+    if bytes.len() < expected_len {
+        return Err(TransportError::Truncated);
+    }
+    if bytes.len() > expected_len {
+        return Err(TransportError::TrailingBytes);
+    }
+
+    let payload = std::str::from_utf8(&bytes[TRANSPORT_HEADER_LEN..])
+        .map_err(|err| TransportError::InvalidPayload(err.to_string()))?;
+    parse_frame(payload).map_err(|err| TransportError::InvalidPayload(err.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -463,5 +582,69 @@ mod tests {
             .entries
             .iter()
             .all(|entry| !entry.message.contains("<fixture-secret>")));
+    }
+
+    #[test]
+    fn transport_frame_round_trips_golden_hello() {
+        let frame = parse_frame(fixture("hello")).unwrap();
+        let encoded = encode_transport_frame(&frame).unwrap();
+        assert_eq!(&encoded[0..4], &TRANSPORT_MAGIC);
+        assert_eq!(
+            u16::from_be_bytes([encoded[4], encoded[5]]),
+            TRANSPORT_WIRE_VERSION
+        );
+        assert_eq!(
+            u16::from_be_bytes([encoded[6], encoded[7]]) as u32,
+            PROTOCOL_VERSION
+        );
+        let decoded = decode_transport_frame(&encoded).unwrap();
+        assert_eq!(decoded, frame);
+    }
+
+    #[test]
+    fn transport_rejects_bad_magic_versions_and_truncation() {
+        let frame = parse_frame(fixture("hello")).unwrap();
+        let mut encoded = encode_transport_frame(&frame).unwrap();
+
+        encoded[0] = b'X';
+        assert_eq!(
+            decode_transport_frame(&encoded),
+            Err(TransportError::BadMagic)
+        );
+
+        let mut encoded = encode_transport_frame(&frame).unwrap();
+        encoded[5] = 2;
+        assert_eq!(
+            decode_transport_frame(&encoded),
+            Err(TransportError::UnsupportedWireVersion(2))
+        );
+
+        let encoded = encode_transport_frame(&frame).unwrap();
+        assert_eq!(
+            decode_transport_frame(&encoded[0..TRANSPORT_HEADER_LEN - 1]),
+            Err(TransportError::Truncated)
+        );
+    }
+
+    #[test]
+    fn handshake_negotiates_shared_features() {
+        let Frame::Hello(hello) = parse_frame(fixture("hello")).unwrap() else {
+            panic!("expected hello");
+        };
+        let Frame::HelloAck(ack) = parse_frame(fixture("hello_ack")).unwrap() else {
+            panic!("expected hello_ack");
+        };
+        let negotiated = negotiate_protocol(&hello, &ack).unwrap();
+        assert_eq!(negotiated.protocol_version, PROTOCOL_VERSION);
+        assert!(negotiated
+            .shared_features
+            .contains(&FEATURE_PANE_DIFF.to_string()));
+
+        let mut bad_ack = ack;
+        bad_ack.protocol_version = 99;
+        assert_eq!(
+            negotiate_protocol(&hello, &bad_ack),
+            Err(TransportError::UnsupportedProtocolVersion(99))
+        );
     }
 }

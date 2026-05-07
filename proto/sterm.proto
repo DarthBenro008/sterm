@@ -2,6 +2,13 @@ syntax = "proto3";
 
 package sterm.v1;
 
+message TransportHeader {
+  bytes magic = 1;
+  uint32 wire_version = 2;
+  uint32 protocol_version = 3;
+  uint32 payload_len = 4;
+}
+
 message Hello {
   string type = 1;
   string client_version = 2;

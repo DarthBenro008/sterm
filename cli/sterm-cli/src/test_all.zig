@@ -8,10 +8,22 @@ const runtime = @import("runtime.zig");
 const security = @import("security.zig");
 const socket = @import("socket.zig");
 const storage = @import("storage.zig");
+const transport = @import("transport.zig");
 const vt = @import("vt.zig");
 
 test "protocol fixtures validate against shared fixture contracts" {
     try protocol.validateAllFixtures(std.testing.allocator);
+}
+
+test "transport header validates production frame contract" {
+    var header: [transport.header_len]u8 = undefined;
+    try transport.encodeHeader(&header, 256);
+    const decoded = try transport.decodeHeader(&header);
+    try std.testing.expectEqual(@as(u16, transport.wire_version), decoded.wire);
+    try std.testing.expectEqual(@as(u16, transport.protocol_wire_version), decoded.protocol_version);
+    try std.testing.expectEqual(@as(u32, 256), decoded.payload_len);
+    try transport.negotiate(transport.protocol_wire_version, transport.protocol_wire_version);
+    try std.testing.expectError(transport.TransportError.UnsupportedProtocolVersion, transport.negotiate(99, transport.protocol_wire_version));
 }
 
 test "CLI exposes required command surface" {

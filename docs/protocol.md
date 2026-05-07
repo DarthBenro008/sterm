@@ -1,6 +1,12 @@
 # sterm protocol
 
-The first-wave protocol contract is fixture-first and dependency-light. `proto/sterm.proto` records the canonical message surface, while JSON fixtures in `fixtures/protocol/` provide cross-language compatibility inputs for Rust, Zig, and TypeScript.
+The protocol contract now has two layers:
+
+1. **Golden semantic fixtures** in `fixtures/protocol/` used by Rust, Zig, and
+   TypeScript compatibility tests.
+2. **Production transport framing** used for wire boundaries. The frame header is
+   binary and versioned; the current payload remains the canonical JSON frame
+   until a later serializer migration is justified by measured pressure.
 
 ## Required frame families
 
@@ -24,10 +30,32 @@ The shared JSON fixture set currently covers every first-wave frame family:
 `pane_snapshot`, `pane_diff`, `scrollback_chunk`, `notification`, `health`,
 `logs`, and `error`.
 
-## First-wave serialization decision
+## Production transport frame
 
-The PRD allows MessagePack, Protobuf, or a custom framed binary protocol for production. This first wave keeps the schema and fixtures dependency-light so all package lanes can consume the same contracts before committing to a binary serializer.
+The production frame header is 12 bytes:
+
+| Offset | Size | Field |
+| --- | ---: | --- |
+| 0 | 4 | Magic bytes: `STRM` |
+| 4 | 2 | Transport wire version, big-endian (`1`) |
+| 6 | 2 | sterm protocol version, big-endian (`1`) |
+| 8 | 4 | Payload length, big-endian |
+
+Rules:
+
+- Reject bad magic.
+- Reject unsupported transport wire versions.
+- Reject unsupported protocol versions during handshake.
+- Reject payloads above the configured maximum.
+- Reject truncated or trailing-byte frames.
+- Keep `hello` / `hello_ack` as the explicit feature negotiation surface.
+
+Rust owns full frame encode/decode in `crates/sterm-protocol`, TypeScript owns
+frontend decode/encode in `packages/protocol-client`, and Zig owns header and
+frame-boundary validation in `cli/sterm-cli/src/transport.zig`.
 
 ## Contract gate
 
-No package lane may define a private incompatible domain/message shape. CLI, Rust backend, frontend, renderer, and storage tests must consume the shared fixtures or record an explicit blocker.
+No package lane may define a private incompatible domain/message shape. CLI,
+Rust backend, frontend, renderer, and storage tests must consume the shared
+fixtures and transport framing or record an explicit blocker.

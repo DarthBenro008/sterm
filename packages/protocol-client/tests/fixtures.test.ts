@@ -1,9 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import {
   assertProtocolVersion,
+  decodeTransportFrame,
+  encodeTransportFrame,
   loadFixtureFrame,
+  negotiateProtocol,
   parseProtocolFrame,
   PROTOCOL_VERSION,
+  TRANSPORT_HEADER_BYTES,
+  TRANSPORT_MAGIC,
+  TRANSPORT_WIRE_VERSION,
+  TransportError,
+  type HelloAckFrame,
+  type HelloFrame,
   type PaneDiffFrame,
   type PaneSnapshotFrame,
   type WorkspaceSnapshotFrame,
@@ -44,6 +53,46 @@ describe("shared protocol fixtures", () => {
     if (hello.type === "hello") assertProtocolVersion(hello);
     if (ack.type === "hello_ack") assertProtocolVersion(ack);
     expect(PROTOCOL_VERSION).toBe(1);
+  });
+
+  test("transport frame round-trips golden hello fixture", async () => {
+    const hello = await loadFixtureFrame("hello");
+    const encoded = encodeTransportFrame(hello);
+    expect([...encoded.slice(0, 4)]).toEqual([...TRANSPORT_MAGIC]);
+    const header = new DataView(encoded.buffer, encoded.byteOffset, encoded.byteLength);
+    expect(header.getUint16(4, false)).toBe(TRANSPORT_WIRE_VERSION);
+    expect(header.getUint16(6, false)).toBe(PROTOCOL_VERSION);
+    expect(header.getUint32(8, false)).toBe(encoded.byteLength - TRANSPORT_HEADER_BYTES);
+    expect(decodeTransportFrame(encoded)).toEqual(hello);
+  });
+
+  test("transport rejects bad magic, bad version, truncation, and trailing bytes", async () => {
+    const hello = await loadFixtureFrame("hello");
+    const encoded = encodeTransportFrame(hello);
+
+    const badMagic = new Uint8Array(encoded);
+    badMagic[0] = 0;
+    expect(() => decodeTransportFrame(badMagic)).toThrow(TransportError);
+
+    const badVersion = new Uint8Array(encoded);
+    badVersion[5] = 2;
+    expect(() => decodeTransportFrame(badVersion)).toThrow(/Unsupported transport wire version 2/);
+
+    expect(() => decodeTransportFrame(encoded.slice(0, TRANSPORT_HEADER_BYTES - 1))).toThrow(/Truncated/);
+
+    const trailing = new Uint8Array(encoded.byteLength + 1);
+    trailing.set(encoded);
+    expect(() => decodeTransportFrame(trailing)).toThrow(/trailing bytes/);
+  });
+
+  test("handshake negotiates shared features and rejects incompatible protocol versions", async () => {
+    const hello = (await loadFixtureFrame("hello")) as HelloFrame;
+    const ack = (await loadFixtureFrame("hello_ack")) as HelloAckFrame;
+    const negotiated = negotiateProtocol(hello, ack);
+    expect(negotiated.protocol_version).toBe(PROTOCOL_VERSION);
+    expect(negotiated.shared_features).toContain("pane-diff-v1");
+
+    expect(() => negotiateProtocol(hello, { ...ack, protocol_version: 99 })).toThrow(/Unsupported sterm protocol version 99/);
   });
 
   test("workspace fixture includes tabs, panes, and split layout truth", async () => {
