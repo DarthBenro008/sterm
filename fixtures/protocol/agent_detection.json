@@ -1,0 +1,11 @@
+{
+  "type": "agent_detection",
+  "pane_id": "pane_01",
+  "agent": "claude",
+  "status": "needs approval",
+  "confidence": "high",
+  "evidence": [
+    { "source": "process_command", "value": "claude" },
+    { "source": "terminal_output", "value": "Do you want to proceed?" }
+  ]
+}

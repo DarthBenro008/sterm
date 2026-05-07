@@ -9,6 +9,9 @@ pub const FEATURE_NOTIFICATIONS: &str = "notifications-v1";
 pub const FEATURE_AUTH_TOKEN_REF: &str = "auth-token-ref-v1";
 pub const FEATURE_WORKSPACE_OPS: &str = "workspace-ops-v1";
 pub const FEATURE_HEALTH_LOGS: &str = "health-logs-v1";
+pub const FEATURE_MULTI_CLIENT: &str = "multi-client-v1";
+pub const FEATURE_ROAMING_TRANSPORT: &str = "roaming-transport-v1";
+pub const FEATURE_AGENT_DETECTION: &str = "agent-detection-v1";
 pub const TRANSPORT_MAGIC: [u8; 4] = *b"STRM";
 pub const TRANSPORT_WIRE_VERSION: u16 = 1;
 pub const TRANSPORT_HEADER_LEN: usize = 12;
@@ -29,6 +32,9 @@ pub enum FrameType {
     PaneDiff,
     ScrollbackChunk,
     Notification,
+    ClientSession,
+    TransportOffer,
+    AgentDetection,
     Health,
     Logs,
     Error,
@@ -50,6 +56,9 @@ pub enum Frame {
     PaneDiff(PaneDiff),
     ScrollbackChunk(ScrollbackChunk),
     Notification(Notification),
+    ClientSession(ClientSession),
+    TransportOffer(TransportOffer),
+    AgentDetection(AgentDetection),
     Health(HealthFrame),
     Logs(LogsFrame),
     Error(ProtocolError),
@@ -74,6 +83,9 @@ impl Hello {
                 FEATURE_AUTH_TOKEN_REF.to_string(),
                 FEATURE_WORKSPACE_OPS.to_string(),
                 FEATURE_HEALTH_LOGS.to_string(),
+                FEATURE_MULTI_CLIENT.to_string(),
+                FEATURE_ROAMING_TRANSPORT.to_string(),
+                FEATURE_AGENT_DETECTION.to_string(),
             ],
         }
     }
@@ -299,6 +311,107 @@ pub enum NotificationLevel {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClientSession {
+    pub session_id: String,
+    pub client_id: String,
+    pub workspace_id: String,
+    pub mode: ClientSessionMode,
+    pub conflict_policy: ClientConflictPolicy,
+    pub lease_owner: Option<String>,
+    pub lease_expires_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClientSessionMode {
+    ReadWrite,
+    ReadOnlyObserver,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClientConflictPolicy {
+    SingleWriter,
+    ReadOnlyObservers,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TransportOffer {
+    pub request_id: String,
+    pub control: ControlTransport,
+    pub stream: StreamTransport,
+    pub encryption: TransportEncryption,
+    pub requires_ssh_control: bool,
+    pub udp_port: Option<u16>,
+    pub fallback: StreamTransport,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControlTransport {
+    SshTunnel,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StreamTransport {
+    SshTunnel,
+    RoamingUdp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransportEncryption {
+    Ssh,
+    NoiseXk,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentDetection {
+    pub pane_id: String,
+    pub agent: AgentKind,
+    pub status: PaneStatus,
+    pub confidence: DetectionConfidence,
+    pub evidence: Vec<DetectionEvidence>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AgentKind {
+    Claude,
+    Codex,
+    Aider,
+    CursorAgent,
+    Opencode,
+    Custom,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DetectionConfidence {
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DetectionEvidence {
+    pub source: DetectionEvidenceSource,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DetectionEvidenceSource {
+    ProcessCommand,
+    PaneTitle,
+    TerminalOutput,
+    ManualTag,
+    CustomRule,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthFrame {
     pub status: HealthStatus,
     pub protocol_version: u32,
@@ -501,6 +614,9 @@ mod tests {
             "pane_diff" => include_str!("../../../fixtures/protocol/pane_diff.json"),
             "scrollback_chunk" => include_str!("../../../fixtures/protocol/scrollback_chunk.json"),
             "notification" => include_str!("../../../fixtures/protocol/notification.json"),
+            "client_session" => include_str!("../../../fixtures/protocol/client_session.json"),
+            "transport_offer" => include_str!("../../../fixtures/protocol/transport_offer.json"),
+            "agent_detection" => include_str!("../../../fixtures/protocol/agent_detection.json"),
             "health" => include_str!("../../../fixtures/protocol/health.json"),
             "logs" => include_str!("../../../fixtures/protocol/logs.json"),
             "error" => include_str!("../../../fixtures/protocol/error.json"),
@@ -518,6 +634,15 @@ mod tests {
         assert!(hello
             .supported_features
             .contains(&FEATURE_PANE_DIFF.to_string()));
+        assert!(hello
+            .supported_features
+            .contains(&FEATURE_MULTI_CLIENT.to_string()));
+        assert!(hello
+            .supported_features
+            .contains(&FEATURE_ROAMING_TRANSPORT.to_string()));
+        assert!(hello
+            .supported_features
+            .contains(&FEATURE_AGENT_DETECTION.to_string()));
         assert_eq!(Hello::current("0.1.0").protocol_version, PROTOCOL_VERSION);
     }
 
@@ -537,6 +662,9 @@ mod tests {
             "pane_diff",
             "scrollback_chunk",
             "notification",
+            "client_session",
+            "transport_offer",
+            "agent_detection",
             "health",
             "logs",
             "error",
@@ -582,6 +710,33 @@ mod tests {
             .entries
             .iter()
             .all(|entry| !entry.message.contains("<fixture-secret>")));
+    }
+
+    #[test]
+    fn multi_client_transport_and_detection_fixtures_are_explicit() {
+        let Frame::ClientSession(session) = parse_frame(fixture("client_session")).unwrap() else {
+            panic!("expected client session");
+        };
+        assert_eq!(session.mode, ClientSessionMode::ReadWrite);
+        assert_eq!(session.conflict_policy, ClientConflictPolicy::SingleWriter);
+        assert_eq!(session.lease_owner.as_deref(), Some("macbook-pro-01"));
+
+        let Frame::TransportOffer(offer) = parse_frame(fixture("transport_offer")).unwrap() else {
+            panic!("expected transport offer");
+        };
+        assert_eq!(offer.control, ControlTransport::SshTunnel);
+        assert_eq!(offer.stream, StreamTransport::RoamingUdp);
+        assert!(offer.requires_ssh_control);
+        assert_eq!(offer.fallback, StreamTransport::SshTunnel);
+
+        let Frame::AgentDetection(detection) = parse_frame(fixture("agent_detection")).unwrap()
+        else {
+            panic!("expected agent detection");
+        };
+        assert_eq!(detection.agent, AgentKind::Claude);
+        assert_eq!(detection.status, PaneStatus::NeedsApproval);
+        assert_eq!(detection.confidence, DetectionConfidence::High);
+        assert_eq!(detection.evidence.len(), 2);
     }
 
     #[test]

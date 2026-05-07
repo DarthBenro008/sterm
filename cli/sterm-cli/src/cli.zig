@@ -2,12 +2,15 @@ const std = @import("std");
 const protocol = @import("protocol.zig");
 const daemon_mod = @import("daemon.zig");
 const doctor_mod = @import("doctor.zig");
+const notify = @import("notify.zig");
 const process = @import("process.zig");
 const pty = @import("pty.zig");
 const runtime = @import("runtime.zig");
 const security = @import("security.zig");
+const session = @import("session.zig");
 const socket = @import("socket.zig");
 const storage = @import("storage.zig");
+const transport_mode = @import("transport_mode.zig");
 const vt = @import("vt.zig");
 
 pub const version = "0.1.0";
@@ -77,8 +80,11 @@ pub fn runArgs(args: []const []const u8, stdout: *std.Io.Writer, stderr: *std.Io
             \\state-dir: {s}
             \\sqlite: {s}
             \\vt: {s}
+            \\multi-client: {s}
+            \\roaming-transport: {s}
+            \\agent-detection: {s}
             \\
-        , .{ socket.default_socket_path, storage.default_state_dir, storage.sqlite.integration_status, vt.productionVtStatus() });
+        , .{ socket.default_socket_path, storage.default_state_dir, storage.sqlite.integration_status, vt.productionVtStatus(), session.status(), transport_mode.status(), notify.status() });
         return;
     }
 
@@ -145,8 +151,11 @@ fn daemon(stdout: *std.Io.Writer, args: []const []const u8) !void {
         \\listener: unix-socket
         \\supervisor: per-pane process boundary
         \\vt: {s}
+        \\multi-client: {s}
+        \\roaming-transport: {s}
+        \\agent-detection: {s}
         \\
-    , .{ home, socket_path, security.secret_file_mode_octal, storage.default_state_dir, plan.vt_status });
+    , .{ home, socket_path, security.secret_file_mode_octal, storage.default_state_dir, plan.vt_status, session.status(), transport_mode.status(), notify.status() });
 }
 
 fn workspace(args: []const []const u8, stdout: *std.Io.Writer) !void {

@@ -9,6 +9,9 @@ test("hello fixture matches client contract", async () => {
   const hello = await fixture<ReturnType<typeof createHello>>("hello.json");
   expect(hello).toEqual(createHello("0.1.0"));
   expect(hello.supported_features).toEqual([...FEATURES]);
+  expect(hello.supported_features).toContain("multi-client-v1");
+  expect(hello.supported_features).toContain("roaming-transport-v1");
+  expect(hello.supported_features).toContain("agent-detection-v1");
 });
 
 test("workspace fixture carries remote-owned layout truth", async () => {

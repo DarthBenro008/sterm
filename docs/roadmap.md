@@ -9,9 +9,9 @@
 | Final protocol transport | protocol | active in `$ultragoal` G004 |
 | Full production hardening | security/reliability | active in `$ultragoal` G005 |
 | Mature UI polish | frontend/ux | completed in `$ultragoal` G006 |
-| Multi-client mode | protocol/agent | active in `$ultragoal` G007 |
-| Mosh/UDP transport | transport | active in `$ultragoal` G007 |
-| Exhaustive agent detection | notifications/agent-workflows | active in `$ultragoal` G007 |
+| Multi-client mode | protocol/agent | completed in `$ultragoal` G007 |
+| Mosh/UDP transport | transport | completed as encrypted roaming-UDP boundary in `$ultragoal` G007 |
+| Exhaustive agent detection | notifications/agent-workflows | completed as builtin detector/evidence contract in `$ultragoal` G007 |
 | CI/release/observability/doctor gates | release/ops | active in `$ultragoal` G008 |
 
 ## Open PRD questions carried forward

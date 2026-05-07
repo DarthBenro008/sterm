@@ -181,6 +181,42 @@ message Notification {
   string reason = 4;
 }
 
+message ClientSession {
+  string type = 1;
+  string session_id = 2;
+  string client_id = 3;
+  string workspace_id = 4;
+  string mode = 5;
+  string conflict_policy = 6;
+  string lease_owner = 7;
+  string lease_expires_at = 8;
+}
+
+message TransportOffer {
+  string type = 1;
+  string request_id = 2;
+  string control = 3;
+  string stream = 4;
+  string encryption = 5;
+  bool requires_ssh_control = 6;
+  uint32 udp_port = 7;
+  string fallback = 8;
+}
+
+message AgentDetection {
+  string type = 1;
+  string pane_id = 2;
+  string agent = 3;
+  string status = 4;
+  string confidence = 5;
+  repeated DetectionEvidence evidence = 6;
+}
+
+message DetectionEvidence {
+  string source = 1;
+  string value = 2;
+}
+
 message Health {
   string type = 1;
   string status = 2;
@@ -229,8 +265,11 @@ message FrameEnvelope {
     PaneDiff pane_diff = 11;
     ScrollbackChunk scrollback_chunk = 12;
     Notification notification = 13;
-    Health health = 14;
-    Logs logs = 15;
-    ErrorFrame error = 16;
+    ClientSession client_session = 14;
+    TransportOffer transport_offer = 15;
+    AgentDetection agent_detection = 16;
+    Health health = 17;
+    Logs logs = 18;
+    ErrorFrame error = 19;
   }
 }

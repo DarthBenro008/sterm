@@ -1,14 +1,17 @@
 const std = @import("std");
 const cli = @import("cli.zig");
 const daemon = @import("daemon.zig");
+const notify = @import("notify.zig");
 const process = @import("process.zig");
 const protocol = @import("protocol.zig");
 const pty = @import("pty.zig");
 const runtime = @import("runtime.zig");
 const security = @import("security.zig");
+const session = @import("session.zig");
 const socket = @import("socket.zig");
 const storage = @import("storage.zig");
 const transport = @import("transport.zig");
+const transport_mode = @import("transport_mode.zig");
 const vt = @import("vt.zig");
 
 test "protocol fixtures validate against shared fixture contracts" {
@@ -43,10 +46,13 @@ test "CLI exposes required command surface" {
     output.clearRetainingCapacity();
     try cli.runArgs(&.{"status"}, &output.writer, &errors.writer);
     try std.testing.expect(std.mem.indexOf(u8, output.written(), "runtime: configured") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "multi-client:") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "agent-detection:") != null);
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{"doctor"}, &output.writer, &errors.writer);
     try std.testing.expect(std.mem.indexOf(u8, output.written(), "\"socket_mode\":\"0600\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.written(), "\"roaming_transport\"") != null);
 
     output.clearRetainingCapacity();
     try cli.runArgs(&.{ "workspace", "list" }, &output.writer, &errors.writer);
@@ -161,4 +167,38 @@ test "storage migrations define initial schema honestly" {
         try std.testing.expect(storage.hasInitialSchemaEntity(entity));
     }
     try std.testing.expect(!(storage.StateStorePlan{}).sqlite_available);
+}
+
+test "multi-client, roaming transport, and agent detection contracts are explicit" {
+    const first = session.decideAttach(.{ .client_id = "client_a", .workspace_id = "ws_01" });
+    try std.testing.expect(first.accepted);
+
+    const conflict = session.decideAttach(.{ .client_id = "client_b", .workspace_id = "ws_01", .existing_writer = "client_a" });
+    try std.testing.expect(!conflict.accepted);
+
+    const observer = session.decideAttach(.{
+        .client_id = "client_b",
+        .workspace_id = "ws_01",
+        .requested_mode = .read_only_observer,
+        .conflict_policy = .read_only_observers,
+        .existing_writer = "client_a",
+    });
+    try std.testing.expect(observer.accepted);
+
+    try transport_mode.TransportOffer.roaming(60000).validate();
+    try std.testing.expectError(transport_mode.TransportModeError.MissingSshControl, (transport_mode.TransportOffer{
+        .stream = .roaming_udp,
+        .encryption = .noise_xk,
+        .requires_ssh_control = false,
+        .udp_port = 60000,
+    }).validate());
+
+    const detection = notify.detect(.{
+        .pane_id = "pane_01",
+        .process_command = "claude",
+        .output_tail = "Do you want to proceed?",
+    });
+    try std.testing.expectEqual(notify.AgentKind.claude, detection.kind);
+    try std.testing.expectEqual(notify.AgentStatus.needs_approval, detection.status);
+    try std.testing.expectEqual(notify.DetectionConfidence.high, detection.confidence);
 }

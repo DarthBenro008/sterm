@@ -9,6 +9,9 @@ pub const features = [_][]const u8{
     "auth-token-ref-v1",
     "workspace-ops-v1",
     "health-logs-v1",
+    "multi-client-v1",
+    "roaming-transport-v1",
+    "agent-detection-v1",
 };
 
 pub const FrameType = enum {
@@ -25,6 +28,9 @@ pub const FrameType = enum {
     pane_diff,
     scrollback_chunk,
     notification,
+    client_session,
+    transport_offer,
+    agent_detection,
     health,
     logs,
     error_frame,
@@ -43,6 +49,9 @@ const error_fields = [_][]const u8{ "type", "code", "message", "retryable" };
 const health_fields = [_][]const u8{ "type", "status", "protocol_version", "uptime_ms", "checks" };
 const logs_fields = [_][]const u8{ "type", "scope", "entries" };
 const notification_fields = [_][]const u8{ "type", "pane_id", "level", "reason" };
+const client_session_fields = [_][]const u8{ "type", "session_id", "client_id", "workspace_id", "mode", "conflict_policy", "lease_owner", "lease_expires_at" };
+const transport_offer_fields = [_][]const u8{ "type", "request_id", "control", "stream", "encryption", "requires_ssh_control", "udp_port", "fallback" };
+const agent_detection_fields = [_][]const u8{ "type", "pane_id", "agent", "status", "confidence", "evidence" };
 const pane_create_fields = [_][]const u8{ "type", "request_id", "workspace_id", "tab_id", "cwd", "command", "rows", "cols" };
 const pane_diff_fields = [_][]const u8{ "type", "pane_id", "seq", "dirty_rows", "cursor" };
 const pane_input_fields = [_][]const u8{ "type", "pane_id", "seq", "bytes_base64" };
@@ -61,6 +70,9 @@ pub const fixtures = [_]Fixture{
     .{ .path = "../../fixtures/protocol/hello_ack.json", .message_type = "hello_ack", .required_fields = &hello_ack_fields },
     .{ .path = "../../fixtures/protocol/logs.json", .message_type = "logs", .required_fields = &logs_fields },
     .{ .path = "../../fixtures/protocol/notification.json", .message_type = "notification", .required_fields = &notification_fields },
+    .{ .path = "../../fixtures/protocol/client_session.json", .message_type = "client_session", .required_fields = &client_session_fields },
+    .{ .path = "../../fixtures/protocol/transport_offer.json", .message_type = "transport_offer", .required_fields = &transport_offer_fields },
+    .{ .path = "../../fixtures/protocol/agent_detection.json", .message_type = "agent_detection", .required_fields = &agent_detection_fields },
     .{ .path = "../../fixtures/protocol/pane_create.json", .message_type = "pane_create", .required_fields = &pane_create_fields },
     .{ .path = "../../fixtures/protocol/pane_diff.json", .message_type = "pane_diff", .required_fields = &pane_diff_fields },
     .{ .path = "../../fixtures/protocol/pane_input.json", .message_type = "pane_input", .required_fields = &pane_input_fields },

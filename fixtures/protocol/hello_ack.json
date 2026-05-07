@@ -8,6 +8,9 @@
     "notifications-v1",
     "auth-token-ref-v1",
     "workspace-ops-v1",
-    "health-logs-v1"
+    "health-logs-v1",
+    "multi-client-v1",
+    "roaming-transport-v1",
+    "agent-detection-v1"
   ]
 }

@@ -120,6 +120,7 @@ function PaneCard({ pane, onSelect }: { pane: PaneViewModel; onSelect: (paneId: 
         <span>{pane.dimensions}</span>
         <span>seq {pane.renderState.seq}</span>
       </div>
+      {pane.agentSummary ? <div className="agent-badge" role="status">{pane.agentSummary}</div> : null}
       <div className="terminal-canvas" role="img" aria-label={`${pane.title} server-rendered terminal snapshot`}>
         <pre>{pane.renderState.cells}</pre>
         {pane.renderState.cursor.visible ? (
@@ -170,6 +171,7 @@ function SettingsPanel({ view }: { view: DesktopViewModel }) {
       <dl>
         <div><dt>Transport</dt><dd>{view.transportSummary}</dd></div>
         <div><dt>Terminal truth</dt><dd>{view.rendererSummary}</dd></div>
+        <div><dt>Agent detection</dt><dd>{view.agentDetectionSummary}</dd></div>
         <div><dt>Secrets</dt><dd>Keychain references only; no plaintext export path.</dd></div>
         <div><dt>Mutations</dt><dd>Disabled until the persistent Tauri bridge is connected.</dd></div>
       </dl>

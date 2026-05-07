@@ -1,0 +1,10 @@
+{
+  "type": "transport_offer",
+  "request_id": "req_transport_01",
+  "control": "ssh_tunnel",
+  "stream": "roaming_udp",
+  "encryption": "noise_xk",
+  "requires_ssh_control": true,
+  "udp_port": 60000,
+  "fallback": "ssh_tunnel"
+}

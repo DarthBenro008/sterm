@@ -18,6 +18,11 @@ The protocol contract now has two layers:
 - pane snapshot and pane diff
 - scrollback metadata and `scrollback_chunk`
 - notification
+- client session/attach state (`client_session`) for single-writer and
+  read-only observer coordination
+- roaming transport offers (`transport_offer`) that keep SSH as the control
+  plane and require encrypted UDP streams plus SSH fallback
+- agent detection (`agent_detection`) with explicit confidence and evidence
 - error
 - health/logs/doctor surfaces (`health`, `logs`)
 
@@ -28,7 +33,20 @@ The shared JSON fixture set currently covers every first-wave frame family:
 `hello`, `hello_ack`, `auth`, `workspace_open`, `workspace_close`,
 `workspace_snapshot`, `pane_create`, `pane_input`, `pane_resize`,
 `pane_snapshot`, `pane_diff`, `scrollback_chunk`, `notification`, `health`,
-`logs`, and `error`.
+`client_session`, `transport_offer`, `agent_detection`, `logs`, and `error`.
+
+## Multi-client and roaming transport stance
+
+G007 makes the previously deferred multi-client/Mosh/agent-detection lane
+explicit in the protocol:
+
+- multi-client attach starts as one active read/write lease per workspace;
+  read-only observers must be explicitly allowed by policy,
+- roaming/UDP is represented as an encrypted stream offer (`noise_xk`) that
+  requires SSH control-plane availability and always advertises SSH tunnel
+  fallback,
+- agent detection reports the detected agent, status, confidence, and evidence
+  source rather than hiding heuristic guesses inside notification copy.
 
 ## Production transport frame
 

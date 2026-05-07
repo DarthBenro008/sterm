@@ -1,0 +1,10 @@
+{
+  "type": "client_session",
+  "session_id": "sess_01",
+  "client_id": "macbook-pro-01",
+  "workspace_id": "ws_01",
+  "mode": "read_write",
+  "conflict_policy": "single_writer",
+  "lease_owner": "macbook-pro-01",
+  "lease_expires_at": "2026-05-07T12:05:00Z"
+}

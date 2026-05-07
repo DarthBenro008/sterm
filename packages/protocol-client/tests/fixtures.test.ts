@@ -32,6 +32,9 @@ const fixtureNames = [
   "pane_diff",
   "scrollback_chunk",
   "notification",
+  "client_session",
+  "transport_offer",
+  "agent_detection",
   "health",
   "logs",
   "error",
@@ -91,6 +94,9 @@ describe("shared protocol fixtures", () => {
     const negotiated = negotiateProtocol(hello, ack);
     expect(negotiated.protocol_version).toBe(PROTOCOL_VERSION);
     expect(negotiated.shared_features).toContain("pane-diff-v1");
+    expect(negotiated.shared_features).toContain("multi-client-v1");
+    expect(negotiated.shared_features).toContain("roaming-transport-v1");
+    expect(negotiated.shared_features).toContain("agent-detection-v1");
 
     expect(() => negotiateProtocol(hello, { ...ack, protocol_version: 99 })).toThrow(/Unsupported sterm protocol version 99/);
   });
@@ -116,6 +122,9 @@ describe("shared protocol fixtures", () => {
     const paneCreate = await loadFixtureFrame("pane_create");
     const paneInput = await loadFixtureFrame("pane_input");
     const scrollback = await loadFixtureFrame("scrollback_chunk");
+    const session = await loadFixtureFrame("client_session");
+    const transportOffer = await loadFixtureFrame("transport_offer");
+    const agentDetection = await loadFixtureFrame("agent_detection");
     const health = await loadFixtureFrame("health");
     const logs = await loadFixtureFrame("logs");
 
@@ -125,6 +134,12 @@ describe("shared protocol fixtures", () => {
     expect(paneCreate.type).toBe("pane_create");
     expect(paneInput.type).toBe("pane_input");
     expect(scrollback.type).toBe("scrollback_chunk");
+    expect(session.type).toBe("client_session");
+    if (session.type === "client_session") expect(session.conflict_policy).toBe("single_writer");
+    expect(transportOffer.type).toBe("transport_offer");
+    if (transportOffer.type === "transport_offer") expect(transportOffer.requires_ssh_control).toBe(true);
+    expect(agentDetection.type).toBe("agent_detection");
+    if (agentDetection.type === "agent_detection") expect(agentDetection.agent).toBe("claude");
     if (health.type === "health") expect(health.protocol_version).toBe(PROTOCOL_VERSION);
     if (logs.type === "logs") expect(logs.entries.every((entry) => !entry.message.includes("<fixture-secret>"))).toBe(true);
   });

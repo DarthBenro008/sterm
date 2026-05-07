@@ -10,6 +10,7 @@ describe("desktop web mock fixture shell", () => {
     expect(state.workspace.tabs).toHaveLength(1);
     expect(state.workspace.panes).toHaveLength(2);
     expect(state.notification.reason).toBe("agent-needs-approval");
+    expect(state.agentDetection.agent).toBe("claude");
   });
 
   test("creates an accessible production shell view model without live mutation claims", async () => {
@@ -20,8 +21,10 @@ describe("desktop web mock fixture shell", () => {
     expect(view.workspace.statusText).toContain("live SSH bridge not connected");
     expect(view.transportSummary).toContain("STRM");
     expect(view.rendererSummary).toContain("Server-owned VT");
+    expect(view.agentDetectionSummary).toContain("claude");
     expect(view.panes).toHaveLength(2);
     expect(view.panes[0]?.ariaLabel).toContain("Claude Agent");
+    expect(view.panes[0]?.agentSummary).toContain("needs approval");
     expect(view.panes[0]?.snapshotAvailable).toBe(true);
     expect(view.panes[1]?.snapshotAvailable).toBe(false);
     expect(view.panes[1]?.scrollbackSummary).toContain("Snapshot pending");

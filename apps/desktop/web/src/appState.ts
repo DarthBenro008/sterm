@@ -48,6 +48,7 @@ export interface PaneViewModel {
   dirtySummary: string;
   scrollbackSummary: string;
   snapshotAvailable: boolean;
+  agentSummary?: string;
 }
 
 export interface DesktopViewModel {
@@ -58,6 +59,7 @@ export interface DesktopViewModel {
   transportSummary: string;
   rendererSummary: string;
   notificationSummary: string;
+  agentDetectionSummary: string;
 }
 
 export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
@@ -118,7 +120,7 @@ export function createDesktopViewModel(data: MockDesktopState, activePaneId?: st
     ? activePaneId
     : activeTab.active_pane_id;
   const activeRenderState = createActivePaneRenderState(data);
-  const panes = data.workspace.panes.map((pane) => createPaneViewModel(pane, activeRenderState, chosenActivePaneId));
+  const panes = data.workspace.panes.map((pane) => createPaneViewModel(pane, activeRenderState, chosenActivePaneId, data));
   const runningPaneCount = data.workspace.panes.filter((pane) => pane.status === "running" || pane.status === "thinking").length;
 
   return {
@@ -138,6 +140,7 @@ export function createDesktopViewModel(data: MockDesktopState, activePaneId?: st
     transportSummary: `STRM frame v${TRANSPORT_WIRE_VERSION} · protocol v${PROTOCOL_VERSION} · magic ${formatTransportMagic()}`,
     rendererSummary: "Server-owned VT snapshots and diffs; frontend draws dirty regions only.",
     notificationSummary: `${data.notification.level}: ${data.notification.reason} on ${data.notification.pane_id}`,
+    agentDetectionSummary: `${data.agentDetection.agent}: ${data.agentDetection.status} (${data.agentDetection.confidence})`,
   };
 }
 
@@ -164,11 +167,14 @@ function createActivePaneRenderState(data: MockDesktopState): PaneRenderState {
   return applyPaneRenderDiff(clean, data.paneDiff);
 }
 
-function createPaneViewModel(pane: Pane, activeRenderState: PaneRenderState, activePaneId: string): PaneViewModel {
+function createPaneViewModel(pane: Pane, activeRenderState: PaneRenderState, activePaneId: string, data: MockDesktopState): PaneViewModel {
   const snapshotAvailable = pane.id === activeRenderState.paneId;
   const renderState = snapshotAvailable ? activeRenderState : createPendingRenderState(pane);
   const canvasCommands = buildCanvasCommands(renderState);
   const dirtyCount = renderState.dirtyRegions.length;
+  const agentSummary = data.agentDetection.pane_id === pane.id
+    ? `${data.agentDetection.agent} · ${data.agentDetection.status} · ${data.agentDetection.confidence} confidence`
+    : undefined;
   return {
     id: pane.id,
     title: pane.title,
@@ -186,6 +192,7 @@ function createPaneViewModel(pane: Pane, activeRenderState: PaneRenderState, act
       ? `${renderState.scrollback.window_lines.toLocaleString()} visible / ${renderState.scrollback.available_lines.toLocaleString()} retained`
       : "Snapshot pending from remote daemon",
     snapshotAvailable,
+    agentSummary,
   };
 }
 

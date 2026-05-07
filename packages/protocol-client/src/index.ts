@@ -11,6 +11,9 @@ export const FEATURES = [
   "auth-token-ref-v1",
   "workspace-ops-v1",
   "health-logs-v1",
+  "multi-client-v1",
+  "roaming-transport-v1",
+  "agent-detection-v1",
 ] as const;
 
 export type Feature = (typeof FEATURES)[number];
@@ -193,6 +196,51 @@ export interface NotificationFrame {
   reason: string;
 }
 
+export type ClientSessionMode = "read_write" | "read_only_observer";
+export type ClientConflictPolicy = "single_writer" | "read_only_observers";
+
+export interface ClientSessionFrame {
+  type: "client_session";
+  session_id: string;
+  client_id: string;
+  workspace_id: string;
+  mode: ClientSessionMode;
+  conflict_policy: ClientConflictPolicy;
+  lease_owner: string | null;
+  lease_expires_at: string | null;
+}
+
+export type ControlTransport = "ssh_tunnel";
+export type StreamTransport = "ssh_tunnel" | "roaming_udp";
+export type TransportEncryption = "ssh" | "noise_xk";
+
+export interface TransportOfferFrame {
+  type: "transport_offer";
+  request_id: string;
+  control: ControlTransport;
+  stream: StreamTransport;
+  encryption: TransportEncryption;
+  requires_ssh_control: boolean;
+  udp_port: number | null;
+  fallback: StreamTransport;
+}
+
+export type AgentKind = "claude" | "codex" | "aider" | "cursor-agent" | "opencode" | "custom" | "unknown";
+export type DetectionConfidence = "low" | "medium" | "high";
+export type DetectionEvidenceSource = "process_command" | "pane_title" | "terminal_output" | "manual_tag" | "custom_rule";
+
+export interface AgentDetectionFrame {
+  type: "agent_detection";
+  pane_id: string;
+  agent: AgentKind;
+  status: PaneStatus;
+  confidence: DetectionConfidence;
+  evidence: Array<{
+    source: DetectionEvidenceSource;
+    value: string;
+  }>;
+}
+
 export type HealthStatus = "ok" | "degraded" | "error";
 
 export interface HealthFrame {
@@ -238,6 +286,9 @@ export type StermFrame =
   | PaneDiffFrame
   | ScrollbackChunkFrame
   | NotificationFrame
+  | ClientSessionFrame
+  | TransportOfferFrame
+  | AgentDetectionFrame
   | HealthFrame
   | LogsFrame
   | ErrorFrame;
