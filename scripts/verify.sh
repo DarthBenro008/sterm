@@ -32,6 +32,7 @@ run_required "production readiness contract" bash scripts/check-production-readi
 run_required "final readiness audit" bash scripts/check-final-readiness.sh
 run_required "desktop signing optional gate" bash scripts/check-release-signing.sh
 run_required "artifact ignore policy" bash scripts/check-artifact-policy.sh
+run_required "tauri desktop icon set" bash scripts/check-tauri-icons.sh
 run_required "doctor output contract" bash scripts/check-doctor-output.sh
 run_required "agent release artifact build/checksum" bash -lc "bash scripts/build-agent.sh && bash scripts/check-release-artifacts.sh"
 run_required "bun install" bun install
