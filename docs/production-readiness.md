@@ -24,7 +24,7 @@ production readiness while still moving the high-risk items first.
 | Full production hardening | Security defaults and redaction tests exist. | SSH/tunnel/bootstrap/keychain/process reliability defaults are hardened with failure-mode tests. | `G005-full-production-hardening` |
 | Mature UI polish | G006 adds an accessible fixture-backed desktop shell with explicit loading/error states, keyboard focus, command palette/shortcut surfaces, honest disabled live mutations, and dirty-region invariant tests. | Desktop UI has accessible navigation, resilient errors/loading, polished surfaces, and targeted tests without claiming live SSH bridge ownership. | `G006-mature-ui-polish` |
 | Multi-client, Mosh/UDP, agent detection | G007 adds protocol fixtures/types, Zig session attach decisions, encrypted roaming-UDP offer validation with SSH fallback, and builtin agent detection with confidence/evidence. | Protocol/session/transport/detection primitives are implemented or blocked with environment-specific evidence rather than roadmap deferral. | `G007-multi-client-mosh-agent-detection` |
-| CI/release/observability/doctor | Baseline verify and docs exist. | CI/release/doctor/logging gates execute real checks and fail honestly for missing production prerequisites. | `G008-ci-release-observability-doctor` |
+| CI/release/observability/doctor | G008 adds executable artifact policy, doctor-output, agent artifact/checksum, CI toolchain/dependency, and release preflight gates. | CI/release/doctor/logging gates execute real checks and fail honestly for missing production prerequisites. | `G008-ci-release-observability-doctor` |
 | Final readiness audit | Not complete. | Evidence bundle maps every gate to code, docs, tests, and remaining impossible prerequisites. | `G009-final-production-readiness-audit` |
 
 ## Classification at the start of this ultragoal
@@ -36,6 +36,7 @@ production readiness while still moving the high-risk items first.
 | TypeScript protocol/renderer/frontend tests | Implemented baseline | `packages/*`, `apps/desktop/web/tests` |
 | Desktop UI resilience and accessibility | Implemented G006 baseline | `apps/desktop/web/src/App.tsx`, `apps/desktop/web/src/appState.ts`, `apps/desktop/web/tests/mock-shell.test.ts`, `packages/renderer/tests/render-model.test.ts` |
 | Multi-client/roaming/agent primitives | Implemented G007 baseline | `fixtures/protocol/client_session.json`, `fixtures/protocol/transport_offer.json`, `fixtures/protocol/agent_detection.json`, `cli/sterm-cli/src/session.zig`, `cli/sterm-cli/src/transport_mode.zig`, `cli/sterm-cli/src/notify.zig` |
+| CI/release/doctor gates | Implemented G008 baseline | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `scripts/check-doctor-output.sh`, `scripts/check-release-artifacts.sh`, `scripts/check-artifact-policy.sh`, `scripts/build-agent.sh` |
 | Zig CLI command surface | Implemented baseline with daemon foundation readiness output | `cli/sterm-cli/src/cli.zig`, `cli/sterm-cli/src/test_all.zig` |
 | Tauri runnable app/signing | In progress under risk-first lane | `G002-tauri-desktop-runtime` |
 | Real SSH/PTY/libghostty | In progress under risk-first lane | `G003-agent-daemon-storage-process-vt` |

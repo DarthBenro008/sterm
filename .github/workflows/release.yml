@@ -4,14 +4,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  signed-release-check:
+  release-preflight:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.11"
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+      - uses: mlugg/setup-zig@v2
+      - name: Install Linux Tauri prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
       - run: bun install --frozen-lockfile
+      - run: bash scripts/check-artifact-policy.sh
+      - run: bash scripts/check-doctor-output.sh
+      - run: bash scripts/build-agent.sh
+        env:
+          STERM_AGENT_TARGETS: "x86_64-linux-gnu aarch64-linux-gnu"
+      - run: bash scripts/check-release-artifacts.sh
       - run: bash scripts/check-release-signing.sh
         env:
           STERM_REQUIRE_SIGNING: "1"
@@ -19,3 +40,16 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - run: bash scripts/package-desktop.sh
+        env:
+          STERM_REQUIRE_SIGNING: "1"
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sterm-release-preflight
+          path: |
+            dist/agent/**
+            target/release/bundle/**

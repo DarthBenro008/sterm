@@ -23,6 +23,11 @@ require_grep() {
 
 require_file docs/production-readiness.md
 require_file .omx/ultragoal/goals.json
+require_file scripts/check-artifact-policy.sh
+require_file scripts/check-doctor-output.sh
+require_file scripts/check-release-artifacts.sh
+require_file .github/workflows/ci.yml
+require_file .github/workflows/release.yml
 
 require_grep '"G002-tauri-desktop-runtime"' .omx/ultragoal/goals.json
 require_grep '"G003-agent-daemon-storage-process-vt"' .omx/ultragoal/goals.json
@@ -35,6 +40,8 @@ require_grep '"G009-final-production-readiness-audit"' .omx/ultragoal/goals.json
 
 require_grep 'Risk-first production gates' docs/production-readiness.md
 require_grep 'Completion rule' docs/production-readiness.md
+require_grep 'scripts/verify.sh' .github/workflows/ci.yml
+require_grep 'check-release-artifacts.sh' .github/workflows/release.yml
 
 if grep -RIn 'p[n]pm\|P[N]PM' . \
   --exclude-dir=.git \

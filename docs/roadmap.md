@@ -12,7 +12,7 @@
 | Multi-client mode | protocol/agent | completed in `$ultragoal` G007 |
 | Mosh/UDP transport | transport | completed as encrypted roaming-UDP boundary in `$ultragoal` G007 |
 | Exhaustive agent detection | notifications/agent-workflows | completed as builtin detector/evidence contract in `$ultragoal` G007 |
-| CI/release/observability/doctor gates | release/ops | active in `$ultragoal` G008 |
+| CI/release/observability/doctor gates | release/ops | completed in `$ultragoal` G008 |
 
 ## Open PRD questions carried forward
 
