@@ -17,6 +17,28 @@ impl SecretRef {
             account: account.into(),
         }
     }
+
+    pub fn validate(&self) -> Result<(), KeychainError> {
+        if self.service.trim().is_empty() || self.account.trim().is_empty() {
+            return Err(KeychainError::InvalidReference);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SecretStorePolicy {
+    pub require_user_approval: bool,
+    pub allow_plaintext_export: bool,
+}
+
+impl Default for SecretStorePolicy {
+    fn default() -> Self {
+        Self {
+            require_user_approval: true,
+            allow_plaintext_export: false,
+        }
+    }
 }
 
 pub trait Keychain {
@@ -52,6 +74,8 @@ impl fmt::Debug for MemoryKeychain {
 pub enum KeychainError {
     BackendUnavailable,
     PermissionDenied,
+    InvalidReference,
+    PlaintextExportDisabled,
 }
 impl fmt::Display for KeychainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -80,6 +104,7 @@ mod tests {
     fn retrieves_secret_by_reference() {
         let mut keychain = MemoryKeychain::default();
         let reference = SecretRef::new("sterm", "alice");
+        reference.validate().unwrap();
         keychain.insert_for_test(reference.clone(), SecretString::new("value"));
         assert_eq!(
             keychain
@@ -88,6 +113,17 @@ mod tests {
                 .unwrap()
                 .expose_for_test(),
             "value"
+        );
+    }
+
+    #[test]
+    fn secret_store_policy_blocks_plaintext_export_by_default() {
+        let policy = SecretStorePolicy::default();
+        assert!(policy.require_user_approval);
+        assert!(!policy.allow_plaintext_export);
+        assert_eq!(
+            SecretRef::new("", "alice").validate(),
+            Err(KeychainError::InvalidReference)
         );
     }
 }

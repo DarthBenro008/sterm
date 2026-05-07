@@ -30,6 +30,21 @@ pub struct TunnelPlan {
     pub remote: RemoteEndpoint,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TunnelPolicy {
+    pub allow_loopback_tcp: bool,
+    pub allow_public_tcp: bool,
+}
+
+impl Default for TunnelPolicy {
+    fn default() -> Self {
+        Self {
+            allow_loopback_tcp: true,
+            allow_public_tcp: false,
+        }
+    }
+}
+
 impl TunnelPlan {
     pub fn validate(&self) -> Result<(), TunnelError> {
         self.ssh
@@ -50,6 +65,15 @@ impl TunnelPlan {
         Ok(())
     }
 
+    pub fn validate_policy(&self, policy: &TunnelPolicy) -> Result<(), TunnelError> {
+        self.validate()?;
+        match &self.local {
+            LocalEndpoint::UnixSocket(_) => Ok(()),
+            LocalEndpoint::LoopbackTcp { .. } if policy.allow_loopback_tcp => Ok(()),
+            LocalEndpoint::LoopbackTcp { .. } => Err(TunnelError::LoopbackTcpDisabled),
+        }
+    }
+
     pub fn local_loopback_addr(port: u16) -> SocketAddr {
         SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port)
     }
@@ -60,6 +84,7 @@ pub enum TunnelError {
     InvalidSshConfig,
     MissingLocalSocket,
     InvalidLocalPort,
+    LoopbackTcpDisabled,
 }
 impl fmt::Display for TunnelError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -93,6 +118,7 @@ mod tests {
             LocalEndpoint::UnixSocket(_)
         ));
         assert!(plan().validate().is_ok());
+        assert!(plan().validate_policy(&TunnelPolicy::default()).is_ok());
     }
 
     #[test]
@@ -100,6 +126,20 @@ mod tests {
         assert_eq!(
             TunnelPlan::local_loopback_addr(49152).ip(),
             IpAddr::V4(Ipv4Addr::LOCALHOST)
+        );
+    }
+
+    #[test]
+    fn tunnel_policy_requires_explicit_loopback_tcp_allowance() {
+        let mut plan = plan();
+        plan.local = LocalEndpoint::LoopbackTcp { port: 49200 };
+        assert!(plan.validate_policy(&TunnelPolicy::default()).is_ok());
+        assert_eq!(
+            plan.validate_policy(&TunnelPolicy {
+                allow_loopback_tcp: false,
+                allow_public_tcp: false,
+            }),
+            Err(TunnelError::LoopbackTcpDisabled)
         );
     }
 }

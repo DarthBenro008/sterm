@@ -167,17 +167,25 @@ impl<T> fmt::Display for Redacted<T> {
 
 pub fn redact(input: &str) -> String {
     let mut output = String::with_capacity(input.len());
+    let mut redact_next = false;
     for token in input.split_whitespace() {
         let lower = token.to_ascii_lowercase();
-        let redacted = lower.contains("token=")
+        let secret_key = lower.contains("token")
             || lower.contains("password=")
-            || lower.contains("passphrase=")
-            || lower.contains("private_key=")
-            || lower.contains("secret=");
+            || lower.contains("password:")
+            || lower.contains("passphrase")
+            || lower.contains("private_key")
+            || lower.contains("secret");
+        let redacted = redact_next || secret_key;
         if !output.is_empty() {
             output.push(' ');
         }
         output.push_str(if redacted { "[REDACTED]" } else { token });
+        redact_next = lower.ends_with(':')
+            && (lower.contains("token")
+                || lower.contains("password")
+                || lower.contains("passphrase")
+                || lower.contains("secret"));
     }
     output
 }
@@ -223,6 +231,10 @@ mod tests {
         assert_eq!(
             redact("connect token=<fixture> ok password=<fixture>"),
             "connect [REDACTED] ok [REDACTED]"
+        );
+        assert_eq!(
+            redact("password: <fixture> auth_token: <fixture> ok"),
+            "[REDACTED] [REDACTED] [REDACTED] [REDACTED] ok"
         );
         assert_eq!(
             format!("{:?}", SecretString::new("abc")),

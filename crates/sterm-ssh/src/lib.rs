@@ -26,7 +26,10 @@ impl SshTarget {
 pub enum CredentialRef {
     Agent,
     Keychain { service: String, account: String },
+    PasswordKeychain { service: String, account: String },
+    PassphraseKeychain { service: String, account: String },
     IdentityFile { path: PathBuf },
+    KeyboardInteractive,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,6 +53,49 @@ pub struct SshConfig {
     pub connect_timeout_ms: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum HostKeyEvidenceSource {
+    KnownHosts { path: PathBuf },
+    UserApprovedTofu,
+    PinnedConfig,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HostKeyEvidence {
+    pub fingerprint_sha256: String,
+    pub source: HostKeyEvidenceSource,
+}
+
+impl HostKeyEvidence {
+    pub fn validate_for(&self, policy: &HostKeyPolicy) -> Result<(), SshConfigError> {
+        if !self.fingerprint_sha256.starts_with("SHA256:") {
+            return Err(SshConfigError::InvalidFingerprint);
+        }
+        match (policy, &self.source) {
+            (HostKeyPolicy::Strict, HostKeyEvidenceSource::KnownHosts { path }) => {
+                if path.as_os_str().is_empty() {
+                    return Err(SshConfigError::MissingHostKeyEvidence);
+                }
+            }
+            (
+                HostKeyPolicy::TrustOnFirstUse { persist },
+                HostKeyEvidenceSource::UserApprovedTofu,
+            ) => {
+                if !persist {
+                    return Err(SshConfigError::UnpersistedTrustOnFirstUse);
+                }
+            }
+            (HostKeyPolicy::PinnedSha256 { fingerprint }, HostKeyEvidenceSource::PinnedConfig) => {
+                if fingerprint != &self.fingerprint_sha256 {
+                    return Err(SshConfigError::HostKeyEvidenceMismatch);
+                }
+            }
+            _ => return Err(SshConfigError::HostKeyEvidenceMismatch),
+        }
+        Ok(())
+    }
+}
+
 impl SshConfig {
     pub fn validate(&self) -> Result<(), SshConfigError> {
         if self.target.host.trim().is_empty() {
@@ -64,6 +110,21 @@ impl SshConfig {
         if let HostKeyPolicy::PinnedSha256 { fingerprint } = &self.host_key_policy {
             if !fingerprint.starts_with("SHA256:") {
                 return Err(SshConfigError::InvalidFingerprint);
+            }
+        }
+        match &self.credential {
+            CredentialRef::Agent | CredentialRef::KeyboardInteractive => {}
+            CredentialRef::IdentityFile { path } => {
+                if path.as_os_str().is_empty() {
+                    return Err(SshConfigError::EmptyCredentialRef);
+                }
+            }
+            CredentialRef::Keychain { service, account }
+            | CredentialRef::PasswordKeychain { service, account }
+            | CredentialRef::PassphraseKeychain { service, account } => {
+                if service.trim().is_empty() || account.trim().is_empty() {
+                    return Err(SshConfigError::EmptyCredentialRef);
+                }
             }
         }
         Ok(())
@@ -85,6 +146,10 @@ pub enum SshConfigError {
     MissingUsername,
     InvalidPort,
     InvalidFingerprint,
+    EmptyCredentialRef,
+    MissingHostKeyEvidence,
+    UnpersistedTrustOnFirstUse,
+    HostKeyEvidenceMismatch,
 }
 
 impl fmt::Display for SshConfigError {
@@ -120,6 +185,50 @@ mod tests {
             fingerprint: "md5:bad".into(),
         };
         assert_eq!(cfg.validate(), Err(SshConfigError::InvalidFingerprint));
+    }
+
+    #[test]
+    fn validates_strict_host_key_evidence() {
+        let evidence = HostKeyEvidence {
+            fingerprint_sha256: "SHA256:abcdef".into(),
+            source: HostKeyEvidenceSource::KnownHosts {
+                path: PathBuf::from("/home/alice/.ssh/known_hosts"),
+            },
+        };
+        evidence.validate_for(&HostKeyPolicy::Strict).unwrap();
+    }
+
+    #[test]
+    fn rejects_unpersisted_tofu_and_mismatched_pins() {
+        let tofu = HostKeyEvidence {
+            fingerprint_sha256: "SHA256:abcdef".into(),
+            source: HostKeyEvidenceSource::UserApprovedTofu,
+        };
+        assert_eq!(
+            tofu.validate_for(&HostKeyPolicy::TrustOnFirstUse { persist: false }),
+            Err(SshConfigError::UnpersistedTrustOnFirstUse)
+        );
+
+        let pinned = HostKeyEvidence {
+            fingerprint_sha256: "SHA256:abcdef".into(),
+            source: HostKeyEvidenceSource::PinnedConfig,
+        };
+        assert_eq!(
+            pinned.validate_for(&HostKeyPolicy::PinnedSha256 {
+                fingerprint: "SHA256:other".into()
+            }),
+            Err(SshConfigError::HostKeyEvidenceMismatch)
+        );
+    }
+
+    #[test]
+    fn rejects_empty_credential_references() {
+        let mut cfg = valid();
+        cfg.credential = CredentialRef::Keychain {
+            service: "".into(),
+            account: "alice".into(),
+        };
+        assert_eq!(cfg.validate(), Err(SshConfigError::EmptyCredentialRef));
     }
 
     #[test]
